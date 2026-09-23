@@ -2,14 +2,20 @@
 
 CSC 699 independent study project about detecting fraudulent job postings using an LLM-based agent.
 
-Currently, the project uses BeautifulSoup to extract text from saved job posting HTML files and save it as JSON for later LLM processing.
+The project uses BeautifulSoup and a local Qwen model through Ollama to turn saved job posting HTML into structured JSON.
 
 ## How to run
 
-Install the dependency:
+Install the dependencies:
 
 ```powershell
 python -m pip install -r requirements.txt
+```
+
+Install and start [Ollama](https://ollama.com/), then download the model once:
+
+```powershell
+ollama pull qwen3.5:9b
 ```
 
 Open a job posting in your browser, expand the full description, and save it as a `.html` file in `data/input/`.
@@ -17,9 +23,13 @@ Open a job posting in your browser, expand the full description, and save it as 
 Run:
 
 ```powershell
-python scripts/prepare_jobs.py
+python scripts/extract_job.py
 ```
 
-Find the prepared text JSON files in `data/output/`.
+Find the structured JSON files in `data/output/`. Running again replaces matching outputs.
 
-`scripts/extract_job.py` is the starting point for LLM extraction into the job schema; the LLM is not connected yet.
+To preview the prepared text without calling the LLM or saving files:
+
+```powershell
+python scripts/prepare_jobs.py
+```
