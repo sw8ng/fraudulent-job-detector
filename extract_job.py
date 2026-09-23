@@ -1,178 +1,270 @@
 import json
-import os
 import sys
-from getpass import getpass
 from pathlib import Path
-from urllib.parse import urlparse
 
-import requests
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).with_name(".env"))
+from bs4 import BeautifulSoup
 
 
-def identify_website(url):
-    """Identify the website using the URL's hostname."""
-    parsed = urlparse(url)
-    if parsed.scheme not in ("https", "http") or not parsed.hostname:
-        raise ValueError("Enter a complete URL starting with https://.")
+def extract_job(html_path):
+    """Return text from a locally saved HTML file, from any website."""
+    path = Path(html_path).expanduser()
+    if path.suffix.lower() not in (".html", ".htm"):
+        raise ValueError("Choose a saved .html or .htm file.")
 
-    for website in ("indeed", "ziprecruiter"):
-        domain = website + ".com"
-        if parsed.hostname == domain or parsed.hostname.endswith("." + domain):
-            return website
-
-    raise ValueError("Use an Indeed or ZipRecruiter job URL.")
-
-
-JOB_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "source_url": {"type": ["string", "null"]},
-        "source_website": {"type": ["string", "null"]},
-        "job_title": {"type": ["string", "null"]},
-        "company": {"type": ["string", "null"]},
-        "location": {"type": ["string", "null"]},
-        "remote_type": {"type": ["string", "null"]},
-        "employment_type": {"type": ["string", "null"]},
-        "salary_min": {"type": ["number", "null"]},
-        "salary_max": {"type": ["number", "null"]},
-        "salary_currency": {"type": ["string", "null"]},
-        "salary_period": {"type": ["string", "null"]},
-        "description": {"type": ["string", "null"]},
-        "responsibilities": {"type": ["string", "null"]},
-        "qualifications": {"type": ["string", "null"]},
-        "benefits": {"type": ["string", "null"]},
-        "date_posted": {"type": ["string", "null"]},
-        "job_id": {"type": ["string", "null"]},
-        "recruiter_name": {"type": ["string", "null"]},
-        "contact_email": {"type": ["string", "null"]},
-        "contact_phone": {"type": ["string", "null"]},
-        "application_method": {"type": ["string", "null"]},
-        "external_urls": {
-            "type": "array",
-            "items": {"type": "string"},
-        },
-        "communication_platforms": {
-            "type": "array",
-            "items": {"type": "string"},
-        },
-        "company_description": {"type": ["string", "null"]},
-    },
-}
-
-
-def extract_job(job_url, api_key=None):
-    """Return structured information extracted from one job posting."""
-    website = identify_website(job_url)
-    print(f"Website: {website}", file=sys.stderr)
-
-    api_key = api_key or os.environ.get("FIRECRAWL_API_KEY")
-    if not api_key:
-        raise ValueError("A Firecrawl API key is required for this REST API request.")
-
-    # Send the URL as JSON
-    response = requests.post(
-        "https://api.firecrawl.dev/v2/scrape",
-        headers={"Authorization": f"Bearer {api_key}"},
-        json={
-            "url": job_url,
-            "formats": [
-                "markdown",
-                {
-                    "type": "json",
-                    "schema": JOB_SCHEMA,
-                    "prompt": (
-                        "Extract information only if it is explicitly present on the job posting. "
-                        "Do not guess missing information. "
-                        "Use null for missing text or number fields. "
-                        "The description should contain the actual job description, not a summary. "
-                        "The external_urls field should contain URLs associated with the job posting."
-                    ),
-                },
-            ],
-        },
-        timeout=60,
-    )
-    if response.status_code >= 400:
-        message = response.text.strip().replace(api_key, "<REDACTED>")
-        raise ValueError(f"Firecrawl HTTP {response.status_code}: {message}")
-
-    # Firecrawl wraps the page content in a JSON response
-    result = response.json()
-    if not result.get("success"):
-        message = str(result.get("error", "Scrape failed.")).replace(
-            api_key, "<REDACTED>"
-        )
-        raise ValueError(f"Firecrawl: {message}")
-    data = result.get("data") or {}
-    content = data.get("markdown") or ""
-    metadata = data.get("metadata") or {}
-    title = str(metadata.get("title") or "").lower()
-    if metadata.get("statusCode", 200) >= 400:
-        raise ValueError(f"The job website returned HTTP {metadata['statusCode']}.")
-    if not content.strip():
-        raise ValueError("Firecrawl returned no page content.")
-    if (
-        "just a moment" in title
-        or "# additional verification required" in content.lower()
-    ):
-        raise ValueError(
-            f"Firecrawl returned a verification page from {website}, not the job posting. "
-            "The job content is unavailable through this request."
-        )
-    job = data.get("json") or {}
-    if not isinstance(job, dict):
-        raise ValueError("Firecrawl returned job data in an unexpected format.")
-
-    fields_with_null_defaults = (
-        "job_title",
-        "company",
-        "location",
-        "remote_type",
-        "employment_type",
-        "salary_min",
-        "salary_max",
-        "salary_currency",
-        "salary_period",
-        "description",
-        "responsibilities",
-        "qualifications",
-        "benefits",
-        "date_posted",
-        "job_id",
-        "recruiter_name",
-        "contact_email",
-        "contact_phone",
-        "application_method",
-        "company_description",
-    )
-    for field in fields_with_null_defaults:
-        job.setdefault(field, None)
-
-    job.setdefault("external_urls", [])
-    job.setdefault("communication_platforms", [])
-    job["source_url"] = job_url
-    if website == "indeed":
-        job["source_website"] = "Indeed"
-    else:
-        job["source_website"] = "ZipRecruiter"
-
-    return job
+    # Parse bytes so BeautifulSoup can detect the saved page's character encoding.
+    soup = BeautifulSoup(path.read_bytes(), "html.parser")
+    text = soup.get_text(separator="\n", strip=True)
+    if not text:
+        raise ValueError("The saved HTML file contains no extractable text.")
+    return text
 
 
 if __name__ == "__main__":
-    job_url = input("Paste one Indeed or ZipRecruiter job URL: ").strip()
+    # Previous Firecrawl implementation (preserved, not executed):
+    # import json
+    # import os
+    # import sys
+    # from getpass import getpass
+    # from pathlib import Path
+    # from urllib.parse import urlparse
+    #
+    # import requests
+    # from dotenv import load_dotenv
+    #
+    # load_dotenv(Path(__file__).with_name(".env"))
+    #
+    #
+    # def identify_website(url):
+    #     # Identify the website using the URL's hostname.
+    #     parsed = urlparse(url)
+    #     if parsed.scheme not in ("https", "http") or not parsed.hostname:
+    #         raise ValueError("Enter a complete URL starting with https://.")
+    #
+    #     for website in ("indeed", "ziprecruiter"):
+    #         domain = website + ".com"
+    #         if parsed.hostname == domain or parsed.hostname.endswith("." + domain):
+    #             return website
+    #
+    #     raise ValueError("Use an Indeed or ZipRecruiter job URL.")
+    #
+    #
+    # JOB_SCHEMA = {
+    #     "type": "object",
+    #     "properties": {
+    #         "source_url": {"type": ["string", "null"]},
+    #         "source_website": {"type": ["string", "null"]},
+    #         "job_title": {"type": ["string", "null"]},
+    #         "company": {"type": ["string", "null"]},
+    #         "location": {"type": ["string", "null"]},
+    #         "remote_type": {"type": ["string", "null"]},
+    #         "employment_type": {"type": ["string", "null"]},
+    #         "raw_salary": {"type": ["string", "null"]},
+    #         "salary_min": {"type": ["number", "null"]},
+    #         "salary_max": {"type": ["number", "null"]},
+    #         "salary_currency": {"type": ["string", "null"]},
+    #         "salary_period": {"type": ["string", "null"]},
+    #         "description": {"type": ["string", "null"]},
+    #         "responsibilities": {"type": ["string", "null"]},
+    #         "qualifications": {"type": ["string", "null"]},
+    #         "education_requirements": {"type": ["string", "null"]},
+    #         "experience_requirements": {"type": ["string", "null"]},
+    #         "benefits": {"type": ["string", "null"]},
+    #         "date_posted": {"type": ["string", "null"]},
+    #         "job_id": {"type": ["string", "null"]},
+    #         "recruiter_name": {"type": ["string", "null"]},
+    #         "recruiter_profile_url": {"type": ["string", "null"]},
+    #         "contact_email": {"type": ["string", "null"]},
+    #         "contact_phone": {"type": ["string", "null"]},
+    #         "application_method": {"type": ["string", "null"]},
+    #         "application_url": {"type": ["string", "null"]},
+    #         "company_website": {"type": ["string", "null"]},
+    #         "payment_request_text": {"type": ["string", "null"]},
+    #         "sensitive_information_request_text": {"type": ["string", "null"]},
+    #         "external_urls": {
+    #             "type": "array",
+    #             "items": {"type": "string"},
+    #         },
+    #         "communication_platforms": {
+    #             "type": "array",
+    #             "items": {"type": "string"},
+    #         },
+    #         "company_description": {"type": ["string", "null"]},
+    #     },
+    # }
+    #
+    #
+    # def extract_job(job_url, api_key=None):
+    #     """Return structured information extracted from one job posting."""
+    #     website = identify_website(job_url)
+    #     print(f"Website: {website}", file=sys.stderr)
+    #
+    #     api_key = api_key or os.environ.get("FIRECRAWL_API_KEY")
+    #     if not api_key:
+    #         raise ValueError("A Firecrawl API key is required for this REST API request.")
+    #
+    #     # Send the URL as JSON
+    #     response = requests.post(
+    #         "https://api.firecrawl.dev/v2/scrape",
+    #         headers={"Authorization": f"Bearer {api_key}"},
+    #         json={
+    #             "url": job_url,
+    #             "formats": [
+    #                 "markdown",
+    #                 {
+    #                     "type": "json",
+    #                     "schema": JOB_SCHEMA,
+    #                     "prompt": (
+    #                         "Extract information only if it is explicitly present on the job posting. "
+    #                         "Do not guess missing information. "
+    #                         "Use null for missing text or number fields. "
+    #                         "The description should contain the actual job description, not a summary. "
+    #                         "The external_urls field should contain URLs associated with the job posting. "
+    #                         "Copy raw_salary verbatim, including currency, ranges, and pay period. "
+    #                         "Extract application_url from the application link, company_website from "
+    #                         "the employer website link, and recruiter_profile_url from the recruiter's "
+    #                         "profile link. Do not substitute the job posting URL or infer URLs. "
+    #                         "Copy education_requirements and experience_requirements from the posting, "
+    #                         "preserving whether qualifications are required or preferred. "
+    #                         "For payment_request_text, copy exact passages asking the applicant to pay "
+    #                         "money, fees, deposits, or purchase equipment or training; exclude salary "
+    #                         "and other payments offered to the applicant. "
+    #                         "For sensitive_information_request_text, copy exact passages asking for "
+    #                         "sensitive information such as government IDs, Social Security numbers, "
+    #                         "bank or card details, passwords, or identity documents. "
+    #                         "Preserve context, including any conditions or negations, and use null "
+    #                         "when no such request is present."
+    #                     ),
+    #                 },
+    #             ],
+    #         },
+    #         timeout=60,
+    #     )
+    #     if response.status_code >= 400:
+    #         message = response.text.strip().replace(api_key, "<REDACTED>")
+    #         raise ValueError(f"Firecrawl HTTP {response.status_code}: {message}")
+    #
+    #     # Firecrawl wraps the page content in a JSON response
+    #     result = response.json()
+    #     if not result.get("success"):
+    #         message = str(result.get("error", "Scrape failed.")).replace(
+    #             api_key, "<REDACTED>"
+    #         )
+    #         raise ValueError(f"Firecrawl: {message}")
+    #     data = result.get("data") or {}
+    #     content = data.get("markdown") or ""
+    #     metadata = data.get("metadata") or {}
+    #     title = str(metadata.get("title") or "").lower()
+    #     if metadata.get("statusCode", 200) >= 400:
+    #         raise ValueError(f"The job website returned HTTP {metadata['statusCode']}.")
+    #     if not content.strip():
+    #         raise ValueError("Firecrawl returned no page content.")
+    #     if (
+    #         "just a moment" in title
+    #         or "# additional verification required" in content.lower()
+    #     ):
+    #         raise ValueError(
+    #             f"Firecrawl returned a verification page from {website}, not the job posting. "
+    #             "The job content is unavailable through this request."
+    #         )
+    #     job = data.get("json") or {}
+    #     if not isinstance(job, dict):
+    #         raise ValueError("Firecrawl returned job data in an unexpected format.")
+    #
+    #     fields_with_null_defaults = (
+    #         "job_title",
+    #         "company",
+    #         "location",
+    #         "remote_type",
+    #         "employment_type",
+    #         "raw_salary",
+    #         "salary_min",
+    #         "salary_max",
+    #         "salary_currency",
+    #         "salary_period",
+    #         "description",
+    #         "responsibilities",
+    #         "qualifications",
+    #         "education_requirements",
+    #         "experience_requirements",
+    #         "benefits",
+    #         "date_posted",
+    #         "job_id",
+    #         "recruiter_name",
+    #         "recruiter_profile_url",
+    #         "contact_email",
+    #         "contact_phone",
+    #         "application_method",
+    #         "application_url",
+    #         "company_website",
+    #         "payment_request_text",
+    #         "sensitive_information_request_text",
+    #         "company_description",
+    #     )
+    #     for field in fields_with_null_defaults:
+    #         job.setdefault(field, None)
+    #
+    #     job.setdefault("external_urls", [])
+    #     job.setdefault("communication_platforms", [])
+    #     # Preserve the scraped text directly instead of asking the model to reproduce it.
+    #     job["raw_posting_text"] = content
+    #     job["source_url"] = job_url
+    #     if website == "indeed":
+    #         job["source_website"] = "Indeed"
+    #     else:
+    #         job["source_website"] = "ZipRecruiter"
+    #
+    #     return job
+    #
+    #
+    # job_url = input("Paste one Indeed or ZipRecruiter job URL: ").strip()
+    # try:
+    #     api_key = (
+    #         os.environ.get("FIRECRAWL_API_KEY")
+    #         or getpass("Firecrawl API key (hidden): ").strip()
+    #     )
+    #     job = extract_job(job_url, api_key)
+    #     output_path = Path(__file__).with_name("extracted_job.json")
+    #     with output_path.open("w", encoding="utf-8") as output_file:
+    #         json.dump(job, output_file, indent=2, ensure_ascii=False)
+    #     print(f"Saved extracted job information to {output_path}.")
+    # except (OSError, requests.RequestException, ValueError) as error:
+    #     print(f"Error: {error}", file=sys.stderr)
+    #     sys.exit(1)
+
+
+    input_dir = Path(__file__).with_name("input")
+    output_dir = Path(__file__).with_name("output")
     try:
-        api_key = (
-            os.environ.get("FIRECRAWL_API_KEY")
-            or getpass("Firecrawl API key (hidden): ").strip()
+        input_dir.mkdir(exist_ok=True)
+        output_dir.mkdir(exist_ok=True)
+        html_files = sorted(
+            path for path in input_dir.iterdir()
+            if path.is_file() and path.suffix.lower() in (".html", ".htm")
         )
-        job = extract_job(job_url, api_key)
-        output_path = Path(__file__).with_name("extracted_job.json")
-        with output_path.open("w", encoding="utf-8") as output_file:
-            json.dump(job, output_file, indent=2, ensure_ascii=False)
-        print(f"Saved extracted job information to {output_path}.")
-    except (OSError, requests.RequestException, ValueError) as error:
-        print(f"Error: {error}", file=sys.stderr)
+    except OSError as error:
+        print(f"Error preparing folders: {error}", file=sys.stderr)
         sys.exit(1)
+
+    if not html_files:
+        print(f"No HTML files found. Save .html or .htm files in {input_dir} and run again.")
+
+    failed = False
+    for html_path in html_files:
+        try:
+            text = extract_job(html_path)
+            job = {
+                "source_file": html_path.name,
+                "raw_posting_text": text,
+            }
+            # Keep the HTML extension so job.html and job.htm have distinct outputs.
+            output_path = output_dir / (html_path.name + ".json")
+            output_path.write_text(
+                json.dumps(job, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            print(f"Saved {output_path.name}.")
+        except (OSError, ValueError) as error:
+            failed = True
+            print(f"Error processing {html_path.name}: {error}", file=sys.stderr)
+
+    sys.exit(1 if failed else 0)
