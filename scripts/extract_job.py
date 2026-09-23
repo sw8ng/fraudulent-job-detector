@@ -1,22 +1,8 @@
-import json
-import sys
-from pathlib import Path
-
-from bs4 import BeautifulSoup
-
-
-def extract_job(html_path):
-    """Return text from a locally saved HTML file, from any website."""
-    path = Path(html_path).expanduser()
-    if path.suffix.lower() not in (".html", ".htm"):
-        raise ValueError("Choose a saved .html or .htm file.")
-
-    # Parse bytes so BeautifulSoup can detect the saved page's character encoding.
-    soup = BeautifulSoup(path.read_bytes(), "html.parser")
-    text = soup.get_text(separator="\n", strip=True)
-    if not text:
-        raise ValueError("The saved HTML file contains no extractable text.")
-    return text
+def extract_job(raw_posting_text):
+    """Use an LLM to turn prepared posting text into the job schema."""
+    # TODO: Add your LLM call, extraction prompt, and schema here.
+    # Return the structured job information as a Python dictionary.
+    raise NotImplementedError("LLM extraction has not been connected yet.")
 
 
 if __name__ == "__main__":
@@ -231,40 +217,4 @@ if __name__ == "__main__":
     #     print(f"Error: {error}", file=sys.stderr)
     #     sys.exit(1)
 
-
-    input_dir = Path(__file__).with_name("input")
-    output_dir = Path(__file__).with_name("output")
-    try:
-        input_dir.mkdir(exist_ok=True)
-        output_dir.mkdir(exist_ok=True)
-        html_files = sorted(
-            path for path in input_dir.iterdir()
-            if path.is_file() and path.suffix.lower() in (".html", ".htm")
-        )
-    except OSError as error:
-        print(f"Error preparing folders: {error}", file=sys.stderr)
-        sys.exit(1)
-
-    if not html_files:
-        print(f"No HTML files found. Save .html or .htm files in {input_dir} and run again.")
-
-    failed = False
-    for html_path in html_files:
-        try:
-            text = extract_job(html_path)
-            job = {
-                "source_file": html_path.name,
-                "raw_posting_text": text,
-            }
-            # Keep the HTML extension so job.html and job.htm have distinct outputs.
-            output_path = output_dir / (html_path.name + ".json")
-            output_path.write_text(
-                json.dumps(job, indent=2, ensure_ascii=False) + "\n",
-                encoding="utf-8",
-            )
-            print(f"Saved {output_path.name}.")
-        except (OSError, ValueError) as error:
-            failed = True
-            print(f"Error processing {html_path.name}: {error}", file=sys.stderr)
-
-    sys.exit(1 if failed else 0)
+    print("LLM extraction is not configured yet. Run python scripts/prepare_jobs.py to prepare the HTML files.")

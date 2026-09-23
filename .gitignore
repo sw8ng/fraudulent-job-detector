@@ -4,7 +4,7 @@ local
 extracted_job.json
 dynamic_webpage.html
 dynamic_webpage.txt
-input/*
-!input/.gitkeep
-output/*
-!output/.gitkeep
+data/input/*
+!data/input/.gitkeep
+data/output/*
+!data/output/.gitkeep
