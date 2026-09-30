@@ -68,9 +68,28 @@ JOB_SCHEMA = {
 }
 
 # Require every field to appear in Qwen's JSON.
-# Fields can still contain null when information is unavailable.
 JOB_SCHEMA["required"] = list(JOB_SCHEMA["properties"].keys())
 JOB_SCHEMA["additionalProperties"] = False
+
+# These definitions are also included in the prompt: JSON shape alone does not
+# explain which passages belong in each field.
+FIELD_GUIDANCE = {
+    "company": "Employer named in the job header, often between the title and location; not the job board.",
+    "description": "Complete job description, including duties, skills, requirements, and benefits. Copy the text, not a summary.",
+    "responsibilities": "Tasks the employee will perform. Include Duties, What you will do, Your role, and equivalent prose even without a heading. Copy all relevant passages.",
+    "qualifications": "Candidate skills, knowledge, abilities, credentials, and requirements. Skills, Requirements, What you bring, and About you are equivalent headings. Include required AND preferred qualifications, preserving those distinctions. Copy all relevant passages.",
+    "education_requirements": "Explicit degrees, schooling, or education requirements, including preferences. Do not infer a degree from the job title or skills.",
+    "experience_requirements": "Copy ONLY statements explicitly requesting prior experience or a track record, required OR preferred. Include hands-on experience even when no years are specified. For example, 'Python experience is preferred' belongs here as well as in qualifications. Do NOT include future job duties, generic skills, knowledge, or abilities without an explicit experience requirement. Preserve preferences and do not invent years.",
+    "benefits": "Employer-provided benefits and perks anywhere in the posting, including lists outside the main description.",
+    "source_url": "URL of the original job listing, only if provided. An application endpoint or profile link is not the source URL.",
+    "source_website": "Job board or website hosting the posting, as explicitly named in the input.",
+    "application_method": "Explicit application instructions or button label, such as Apply with Indeed.",
+    "application_url": "Supplied URL attached to the application link or button. Preserve the full URL.",
+    "company_website": "Explicit official employer website, not a job-board company profile.",
+    "external_urls": "URLs supplied by the employer in the posting for applications, company information, recruiting, or applicant instructions. Exclude job-board navigation, candidate account/profile links, sign-in, profile matching widgets, help, privacy, and footer links. A URL on another subdomain is not automatically relevant. Return [] when no relevant URLs are supplied.",
+}
+for field, guidance in FIELD_GUIDANCE.items():
+    JOB_SCHEMA["properties"][field]["description"] = guidance
 
 
 def extract_job(raw_posting_text):
@@ -97,6 +116,14 @@ Rules:
 - The description should contain the actual job description,
   not a summary.
 - Preserve whether qualifications are required or preferred.
+- Extract by meaning, not by exact heading names. A Skills section belongs in
+  qualifications; a Duties section belongs in responsibilities.
+- Fields overlap intentionally: copying a passage into description does NOT
+  replace extracting it into responsibilities, qualifications, benefits, or
+  experience_requirements. The same passage can belong to multiple fields.
+- Examine the whole posting for EACH field before returning null. Missing a
+  matching heading does not mean information is missing. Leave genuinely absent
+  facts null; never invent facts just to fill fields.
 - payment_request_text should only contain passages asking
   the applicant to pay money, fees, deposits, or purchase
   equipment or training.
@@ -107,8 +134,38 @@ Rules:
 - Preserve relevant context and negations.
 
 """
-    prompt += "\nReturn JSON matching this schema:\n" + json.dumps(JOB_SCHEMA)
+    prompt += "\nField definitions:\n" + json.dumps(FIELD_GUIDANCE, ensure_ascii=False)
 
+    # Extract compact fields before copying the long description. Keeping these
+    # separate prevents the copying task from crowding out field extraction.
+    job = {}
+    groups = [
+        [field for field in JOB_SCHEMA["properties"] if field not in
+         ("description", "education_requirements", "experience_requirements")],
+        ["education_requirements", "experience_requirements"],
+        ["description"],
+    ]
+    for fields in groups:
+        schema = {
+            "type": "object",
+            "properties": {field: JOB_SCHEMA["properties"][field] for field in fields},
+            "required": fields,
+            "additionalProperties": False,
+        }
+        task_prompt = prompt + "\nFor this pass return ONLY these fields: " + ", ".join(fields)
+        task_prompt += "\nReturn JSON matching this schema:\n" + json.dumps(schema)
+        job.update(_extract_fields(raw_posting_text, task_prompt, schema))
+    validate(instance=job, schema=JOB_SCHEMA)
+    # Preserve cents, but serialize whole salary amounts without a trailing .0.
+    for field in ("salary_min", "salary_max"):
+        value = job[field]
+        if isinstance(value, float) and value.is_integer():
+            job[field] = int(value)
+    return job
+
+
+def _extract_fields(raw_posting_text, prompt, schema):
+    """Run and validate one bounded extraction pass."""
     # A local model can take a few minutes, but should not wait forever.
     client = Client(host="http://localhost:11434", timeout=300)
     response = client.chat(
@@ -123,7 +180,7 @@ Rules:
                 "content": raw_posting_text,
             },
         ],
-        format=JOB_SCHEMA,
+        format=schema,
         think=False,
         options={
             "temperature": 0,
@@ -139,14 +196,14 @@ Rules:
         raise ValueError("Ollama returned an empty response.")
 
     job = json.loads(response.message.content)
-    # Models sometimes use empty strings for missing values; our schema uses null.
+    # Null for missing values.
     if isinstance(job, dict):
         for field, value in job.items():
             if isinstance(value, str) and not value.strip():
                 job[field] = None
-    # Valid JSON can still have missing fields or wrong types.
+    # Validate JSON.
     try:
-        validate(instance=job, schema=JOB_SCHEMA)
+        validate(instance=job, schema=schema)
     except ValidationError as error:
         raise ValueError(f"Model output does not match the job schema: {error.message}") from error
     return job
@@ -175,6 +232,11 @@ if __name__ == "__main__":
     failed = False
     for html_path in html_files:
         try:
+            output_path = output_dir / f"{html_path.stem}.json"
+            if output_path.is_file():
+                print(f"Skipping {html_path.name}: output already exists.", flush=True)
+                continue
+
             # 1. Read the HTML and prepare its text in memory.
             print(f"Preparing {html_path.name}...", flush=True)
             text = prepare_job(html_path)
@@ -188,7 +250,6 @@ if __name__ == "__main__":
             job["raw_posting_text"] = text
 
             # 4. Save only the final JSON.
-            output_path = output_dir / f"{html_path.stem}.json"
             output_path.write_text(
                 json.dumps(job, indent=2, ensure_ascii=False) + "\n",
                 encoding="utf-8",

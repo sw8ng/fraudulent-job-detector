@@ -10,14 +10,12 @@ def prepare_job(html_path):
     if path.suffix.lower() != ".html":
         raise ValueError("Choose a saved .html file.")
 
-    # Parse bytes so BeautifulSoup can detect the saved page's character encoding.
     soup = BeautifulSoup(path.read_bytes(), "html.parser")
     # Remove page navigation and footer boilerplate before sending text to Qwen.
     for tag in soup.find_all(["nav", "footer", "script", "style", "template"]):
         tag.decompose()
 
     # Keep link destinations next to their labels for the LLM.
-    # Skip local browser asset links and page fragments.
     for link in soup.find_all("a", href=True):
         href = link["href"].strip()
         if href.lower().startswith(("http://", "https://", "mailto:", "tel:")):

@@ -26,7 +26,17 @@ Run:
 python scripts/extract_job.py
 ```
 
-Find the structured JSON files in `data/output/`. Running again replaces matching outputs.
+Find the structured JSON files in `data/output/`. Files with matching JSON outputs
+are skipped before calling Qwen. To re-extract a posting, delete its matching JSON
+and run again. Existing outputs are skipped even if the input HTML has changed.
+
+Extraction uses three Qwen passes: general fields, education/experience, and the
+full description. Field definitions map headings such as `Duties` to
+responsibilities and `Skills` to qualifications. Passes use the original posting
+independently, so copying the description does not replace extracting its fields.
+Information may appear in multiple fields; genuinely missing facts stay `null`.
+This takes longer than a single model call, and model output still needs review.
+
 
 To preview the prepared text without calling the LLM or saving files:
 
