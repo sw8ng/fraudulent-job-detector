@@ -1,0 +1,171 @@
+{
+  "model": "qwen3.5:9b",
+  "company_lookup": {
+    "company": "Hiresort",
+    "query": "\"Hiresort\" official company website",
+    "provider": "ddgs",
+    "company_website": null,
+    "status": "ambiguous",
+    "verified": false,
+    "candidates": [
+      {
+        "website": "https://hiresort.ai/",
+        "source_url": "https://hiresort.ai/",
+        "title": "HireSort: Agentic Hiring Workflows for Faster Shortlists",
+        "description": "HireSort creates JDs, posts jobs, sources candidates, screens resumes, runs AI phone screens, conducts first-round interviews, and delivers structured shortlists.",
+        "name_match": true,
+        "evidence": [
+          {
+            "query": "\"Hiresort\" official company website",
+            "source_url": "https://hiresort.ai/",
+            "title": "HireSort: Agentic Hiring Workflows for Faster Shortlists",
+            "description": "HireSort creates JDs, posts jobs, sources candidates, screens resumes, runs AI phone screens, conducts first-round interviews, and delivers structured shortlists."
+          },
+          {
+            "query": "\"Hiresort\" San Francisco, CA 94107 AI Engineer",
+            "source_url": "https://hiresort.ai/",
+            "title": "HireSort: Agentic Hiring Workflows for Faster Shortlists",
+            "description": "HireSort creates JDs, posts jobs, sources candidates, screens resumes, runs AI phone screens, conducts first-round interviews, and delivers structured shortlists."
+          }
+        ]
+      },
+      {
+        "website": "https://www.hiresort.app/",
+        "source_url": "https://www.hiresort.app/",
+        "title": "HireSort | AI resume screening for hiring teams",
+        "description": "CVs and job descriptions are sensitive. Use HTTPS in production, restrict access to your team, and review our privacy overview for how HireSort approaches processing and retention. We design HireSort so recruiters stay accountable for final hiring decisions.",
+        "name_match": true,
+        "evidence": [
+          {
+            "query": "\"Hiresort\" official company website",
+            "source_url": "https://www.hiresort.app/",
+            "title": "HireSort | AI resume screening for hiring teams",
+            "description": "CVs and job descriptions are sensitive. Use HTTPS in production, restrict access to your team, and review our privacy overview for how HireSort approaches processing and retention. We design HireSort so recruiters stay accountable for final hiring decisions."
+          },
+          {
+            "query": "\"Hiresort\" San Francisco, CA 94107 AI Engineer",
+            "source_url": "https://www.hiresort.app/",
+            "title": "HireSort | AI resume screening for hiring teams",
+            "description": "CVs and job descriptions are sensitive. Use HTTPS in production, restrict access to your team, and review our privacy overview for how HireSort approaches processing and retention. We design HireSort so recruiters stay accountable for final hiring decisions."
+          }
+        ]
+      },
+      {
+        "website": "https://www.simplyhired.com/",
+        "source_url": "https://www.simplyhired.com/job/HkfxNPKKIBEsRPgy_19d-VsZZpwbMd45rIZs5bkUVzDYuj0yMTbsjg",
+        "title": "AI Engineer - Hiresort | San Francisco, CA - SimplyHired",
+        "description": "We are seeking a dynamic and innovative AI Engineer to join our forward-thinking technology team. In this role, you will leverage cutting-edge machine learning frameworks, statistical modeling, and big data systems to develop, evaluate, and deploy advanced AI models. Your expertise will drive the creation of scalable AI solutions that transform complex data into actionable insights, enabling ...",
+        "name_match": false,
+        "evidence": [
+          {
+            "query": "\"Hiresort\" San Francisco, CA 94107 AI Engineer",
+            "source_url": "https://www.simplyhired.com/job/HkfxNPKKIBEsRPgy_19d-VsZZpwbMd45rIZs5bkUVzDYuj0yMTbsjg",
+            "title": "AI Engineer - Hiresort | San Francisco, CA - SimplyHired",
+            "description": "We are seeking a dynamic and innovative AI Engineer to join our forward-thinking technology team. In this role, you will leverage cutting-edge machine learning frameworks, statistical modeling, and big data systems to develop, evaluate, and deploy advanced AI models. Your expertise will drive the creation of scalable AI solutions that transform complex data into actionable insights, enabling ..."
+          }
+        ]
+      },
+      {
+        "website": "https://wellfound.com/",
+        "source_url": "https://wellfound.com/company/hiresort/jobs",
+        "title": "Jobs at Hiresort: Explore current Opportunities",
+        "description": "Hiresort is hiring! See 1 job in August 2026! Apply to the latest jobs with a single profile and get in touch with hiring managers directly. Learn about salary, equity, work-life balance, perks, benefits, and company culture!",
+        "name_match": false,
+        "evidence": [
+          {
+            "query": "\"Hiresort\" San Francisco, CA 94107 AI Engineer",
+            "source_url": "https://wellfound.com/company/hiresort/jobs",
+            "title": "Jobs at Hiresort: Explore current Opportunities",
+            "description": "Hiresort is hiring! See 1 job in August 2026! Apply to the latest jobs with a single profile and get in touch with hiring managers directly. Learn about salary, equity, work-life balance, perks, benefits, and company culture!"
+          }
+        ]
+      }
+    ],
+    "searches": [
+      {
+        "query": "\"Hiresort\" official company website",
+        "results": [
+          {
+            "url": "https://hiresort.ai/",
+            "title": "HireSort: Agentic Hiring Workflows for Faster Shortlists",
+            "description": "HireSort creates JDs, posts jobs, sources candidates, screens resumes, runs AI phone screens, conducts first-round interviews, and delivers structured shortlists."
+          },
+          {
+            "url": "https://hiresort.ai/about",
+            "title": "About HireSort - HireSort",
+            "description": "Structured rubrics ensure every candidate is evaluated against the same criteria, in the same way. Our platform supports recruiters — it doesn't replace them. Final decisions always belong to humans. See how HireSort can help your team process applications at scale while staying aligned to the role you are hiring for."
+          },
+          {
+            "url": "https://www.hiresort.app/",
+            "title": "HireSort | AI resume screening for hiring teams",
+            "description": "CVs and job descriptions are sensitive. Use HTTPS in production, restrict access to your team, and review our privacy overview for how HireSort approaches processing and retention. We design HireSort so recruiters stay accountable for final hiring decisions."
+          },
+          {
+            "url": "https://hiresort.ai/product/resume-management",
+            "title": "Resume & CV Management Software for Recruiters in 2026 | HireSort",
+            "description": "HireSort is resume and CV management software for recruiters and US hiring teams. Store resumes in one repository, build a reusable candidate database, track hiring stages, and screen profiles with AI — a faster resume management system than spreadsheets."
+          },
+          {
+            "url": "https://hiresort.ai/product/recruitment-software",
+            "title": "AI Recruitment Software for Resume Screening in 2026 | HireSort",
+            "description": "HireSort keeps this page focused on recruitment software and AI-assisted hiring operations. Beyond resume screening, HireSort connects role intake, JD creation, job posting, sourcing, phone screening, first-round interviews, and shortlist delivery in one workflow."
+          }
+        ]
+      },
+      {
+        "query": "\"Hiresort\" San Francisco, CA 94107 AI Engineer",
+        "results": [
+          {
+            "url": "https://www.simplyhired.com/job/HkfxNPKKIBEsRPgy_19d-VsZZpwbMd45rIZs5bkUVzDYuj0yMTbsjg",
+            "title": "AI Engineer - Hiresort | San Francisco, CA - SimplyHired",
+            "description": "We are seeking a dynamic and innovative AI Engineer to join our forward-thinking technology team. In this role, you will leverage cutting-edge machine learning frameworks, statistical modeling, and big data systems to develop, evaluate, and deploy advanced AI models. Your expertise will drive the creation of scalable AI solutions that transform complex data into actionable insights, enabling ..."
+          },
+          {
+            "url": "https://hiresort.ai/",
+            "title": "HireSort: Agentic Hiring Workflows for Faster Shortlists",
+            "description": "HireSort creates JDs, posts jobs, sources candidates, screens resumes, runs AI phone screens, conducts first-round interviews, and delivers structured shortlists."
+          },
+          {
+            "url": "https://wellfound.com/company/hiresort/jobs",
+            "title": "Jobs at Hiresort: Explore current Opportunities",
+            "description": "Hiresort is hiring! See 1 job in August 2026! Apply to the latest jobs with a single profile and get in touch with hiring managers directly. Learn about salary, equity, work-life balance, perks, benefits, and company culture!"
+          },
+          {
+            "url": "https://hiresort.ai/about",
+            "title": "About HireSort - HireSort",
+            "description": "HireSort helps hiring teams screen resumes faster with explainable AI scoring, bulk processing, and recruiter-friendly workflows. Built for modern, scalable hiring."
+          },
+          {
+            "url": "https://www.hiresort.app/",
+            "title": "HireSort | AI resume screening for hiring teams",
+            "description": "CVs and job descriptions are sensitive. Use HTTPS in production, restrict access to your team, and review our privacy overview for how HireSort approaches processing and retention. We design HireSort so recruiters stay accountable for final hiring decisions."
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "selection": {
+      "selected_url": null,
+      "match_strength": "unresolved",
+      "reason": "The posting describes a role for an 'AI Engineer' focused on developing machine learning models, big data systems (Hadoop, Spark), and statistical analysis. The search evidence identifies two candidates with the name 'Hiresort': one at hiresort.ai (focused on agentic hiring workflows) and one at hiresort.app (focused on AI resume screening). While both are AI-related, neither description explicitly confirms they employ internal AI engineers for model development as described in the posting; rather, they appear to be SaaS products *using* AI for recruitment. The name match is strong ('Hiresort'), but the specific job function and company structure (internal engineering team vs. product-focused startup) are not distinguished by the provided text. Without explicit confirmation that 'Hiresort' is hiring for an internal AI engineering role rather than selling a product, or evidence distinguishing between two different companies with the same name in San Francisco, the candidates cannot be definitively selected.",
+      "remaining_uncertainty": "It is unclear if 'Hiresort' refers to a single entity offering both products or two distinct entities. The posting's specific technical stack (TensorFlow, SAS, Hadoop) is not mentioned in the candidate descriptions. The location match (San Francisco) applies to the name but does not confirm the operational scope of the specific hiring entity."
+    }
+  },
+  "company_website_used": null,
+  "tool_calls": [
+    {
+      "tool": "inspect_application_url",
+      "arguments": {
+        "application_url": "https://smartapply.indeed.com/beta/indeedapply/applybyapplyablejobid?indeedApplyableJobId=38de3f1a-935a-45e0-b1f2-61d43092c901-cGR4cHJvZDE&iaUid=1k369gk16gqm3801&pingbackUrl=https%3A%2F%2Fgdc.indeed.com%2Fconv%2ForgIndApp%3Fco%3DUS%26vjtk%3D1k369gk00iq4m800%26jk%3D24eb150e17e59711%26mvj%3D0%26asub%3Dmob-norsvp-noapply%26vjfrom%3Dshareddesktop_copy%26astse%3D7881c73d9b83f770%26assa%3D9352&spn=0",
+        "company_website": "https://hiresort.ai/"
+      },
+      "evidence": {
+        "error": "Tool arguments must use the supplied posting URLs"
+      }
+    }
+  ],
+  "assessment": {
+    "risk_level": "insufficient evidence",
+    "explanation": "The job posting is for an 'AI Engineer' at a company named 'Hiresort'. The automatic lookup identified two potential websites: hiresort.ai and hiresort.app, both of which describe SaaS products (hiring workflows and resume screening) rather than confirming the employment of internal AI engineers. The search results do not explicitly confirm that these entities are hiring for the specific role described (developing models with TensorFlow/Hadoop). Furthermore, the provided application URL is a generic Indeed smart apply link, which does not inherently verify the employer's legitimacy. While the domain names match the company name and HTTPS is present, the mismatch between the product-focused descriptions found online and the internal engineering role in the posting creates ambiguity. Without explicit confirmation that 'Hiresort' is hiring for an internal team rather than selling a product, or evidence distinguishing between potential entities with similar names, the risk cannot be definitively assessed as low or high."
+  }
+}
