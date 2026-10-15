@@ -2,6 +2,13 @@
 
 CSC 699 independent study project about detecting fraudulent job postings using an LLM-based agent.
 
+## AI assistance disclosure
+
+I use AI tools to help turn my ideas and vision for this project into working
+software. I review AI-assisted contributions and include only code that I
+understand and can explain. I take full responsibility for the code I include,
+the project's design decisions, testing, limitations, and final results.
+
 The project uses BeautifulSoup and a local Qwen model through Ollama to turn saved job posting HTML into structured JSON.
 
 ## How to run
@@ -46,6 +53,30 @@ python scripts/prepare_jobs.py
 
 ## Investigate an application link
 
+Assessment now begins with a local Qwen content-analysis pass before company
+search or URL checks. It saves `content_analysis` with quoted observations,
+unverified claims to check, and limitations. Python excludes statements whose
+supporting quotes are absent from the supplied posting text. Quotes can be
+checked mechanically; their interpretation still needs review. These initial
+observations are supplied to the final assessment and are not a fraud verdict.
+
+To test this step independently on an extracted job JSON:
+
+```powershell
+python scripts/analyze_content.py "data/output/AI Engineer - San Francisco, CA 94107 - Indeed.json"
+```
+
+The components can also be run separately:
+
+```powershell
+python scripts/follow_redirects.py "https://example.com"
+python scripts/get_domain_info.py example.com
+```
+
+Redirect tracing does not call RDAP. Domain lookup accepts a domain or URL and
+looks up its registrable domain without visiting the application page. The
+combined inspection tool traces the destination first, then looks up that domain.
+
 The first external-evidence tool follows HTTP redirects, records the destination
 and HTTPS use, retrieves RDAP registration information, and compares registrable
 domains with the employer website supplied in the posting. It returns evidence,
@@ -66,6 +97,10 @@ python scripts/assess_job.py "data/output/AI Engineer - San Francisco, CA 94107 
 The saved result contains `company_lookup` (website search evidence),
 `company_website_used`, `tool_calls` (Qwen's requested arguments and returned
 evidence), and `assessment` (risk level and explanation). The posting is preserved.
+Each executed tool entry records both the model's requested `arguments` and the
+`effective_arguments` actually used. If no company website was selected or
+supplied, an unselected URL proposed by Qwen is ignored and inspection runs with
+`company_website: null`. The application URL must still match the posting exactly.
 If Qwen does not request the tool, the trace is empty and it is told to disclose
 that no external investigation occurred. Postings without an application URL
 receive an assessment from the supplied posting only.
@@ -105,7 +140,9 @@ Ltd., Corporation), and checks every title segment, including `About Us | Acme`.
 It avoids loose substring matching and records `name_match_reasons`. Multiple
 pages from the same domain retain their evidence. A contextual follow-up may
 also recover an empty initial search or improve a previously nonmatching
-candidate. Follow-up candidates still go through Qwen selection in assessment;
+candidate. After a follow-up, one name match becomes `candidate_found`, multiple
+matches remain `ambiguous`, and zero matches become `no_matching_candidate`.
+Only ambiguous candidates go through Qwen selection in assessment;
 the standalone command only gathers evidence.
 
 The lookup filters common job boards/directories and compares the company name

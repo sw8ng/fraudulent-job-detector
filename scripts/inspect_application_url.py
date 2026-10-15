@@ -117,31 +117,10 @@ def inspect_application_url(application_url: str, company_website: str | None = 
             result["errors"].append({"stage": "company_domain", "message": str(error)})
     with httpx.Client(timeout=15, follow_redirects=False, trust_env=False,
                       headers={"User-Agent": "JobEvidenceResearch/1.0"}) as client:
-        url = application_url
-        try:
-            for step in range(11):
-                if url in result["redirect_chain"]:
-                    raise ValueError("Redirect loop detected")
-                status, location = fetch(client, url)
-                result["redirect_chain"].append(url)
-                result["http_status"] = status
-                if status not in REDIRECT_CODES:
-                    result["final_url"] = url
-                    result["final_domain"] = domain_for(url)
-                    result["https"] = urlsplit(url).scheme == "https"
-                    result["redirect_lookup_success"] = True
-                    if status >= 400:
-                        result["errors"].append({"stage": "http", "message": f"Destination returned HTTP {status}; page unavailable"})
-                    break
-                if not location:
-                    raise ValueError("Redirect has no Location header")
-                if step == 10:
-                    raise ValueError("Application redirect limit reached")
-                target = urljoin(url, location)
-                result["redirects"].append({"from": url, "to": target, "status": status})
-                url = target
-        except (httpx.HTTPError, OSError, ValueError, UnicodeError) as error:
-            result["errors"].append({"stage": "redirects", "message": str(error)})
+        from follow_redirects import follow_redirects
+        trace = follow_redirects(application_url, client=client)
+        result["errors"].extend(trace.pop("errors"))
+        result.update(trace)
         if result["final_domain"]:
             if result["company_domain"]:
                 result["domain_matches_company"] = result["final_domain"] == result["company_domain"]

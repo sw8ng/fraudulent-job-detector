@@ -10,9 +10,36 @@ import httpx
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import inspect_application_url as url_tool
 from assess_job import assess_job
+from follow_redirects import follow_redirects
+from get_domain_info import get_domain_info
 
 
 class URLTests(unittest.TestCase):
+    def test_standalone_trace_does_not_request_rdap(self):
+        requested = []
+        def handler(request):
+            requested.append(str(request.url))
+            if request.url.path == "/start":
+                return httpx.Response(302, headers={"Location": "/end"})
+            return httpx.Response(200)
+        with httpx.Client(transport=httpx.MockTransport(handler)) as client, patch.object(url_tool, "validate_public_url"):
+            result = follow_redirects("https://example.com/start", client=client)
+        self.assertEqual(result["final_url"], "https://example.com/end")
+        self.assertEqual(len(requested), 2)
+        self.assertTrue(result["limitations"])
+
+    def test_standalone_domain_lookup_normalizes_subdomain(self):
+        requested = []
+        def handler(request):
+            requested.append(str(request.url))
+            return httpx.Response(200, json={"events": []})
+        client = httpx.Client(transport=httpx.MockTransport(handler))
+        with patch.object(url_tool.httpx, "Client", return_value=client), patch.object(url_tool, "validate_public_url"):
+            result = get_domain_info("https://jobs.example.co.uk/apply")
+        self.assertEqual(result["domain"], "example.co.uk")
+        self.assertTrue(result["lookup_success"])
+        self.assertEqual(requested, ["https://rdap.org/domain/example.co.uk"])
+
     def investigate(self, handler, url="https://jobs.example.co.uk/apply", company="https://example.co.uk"):
         client = httpx.Client(transport=httpx.MockTransport(handler))
         with patch.object(url_tool.httpx, "Client", return_value=client), patch.object(url_tool, "validate_public_url"):
@@ -90,6 +117,14 @@ class AgentTests(unittest.TestCase):
     def test_empty_missing_company_allowed(self):
         _, _, investigator = self.run_agent({"application_url": "https://example.com", "company_website": ""})
         investigator.assert_called_once_with("https://example.com", None)
+
+    def test_unselected_company_ignored_without_blocking_inspection(self):
+        result, client, investigator = self.run_agent({
+            "application_url": "https://example.com", "company_website": "https://unselected.com/"})
+        investigator.assert_called_once_with("https://example.com", None)
+        entry = result["tool_calls"][0]
+        self.assertEqual(entry["arguments"]["company_website"], "https://unselected.com/")
+        self.assertIsNone(entry["effective_arguments"]["company_website"])
 
 
 if __name__ == "__main__":

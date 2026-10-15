@@ -23,12 +23,13 @@ class CompanyTests(unittest.TestCase):
         result = find_company_website("Acme", searcher=lambda q: [
             {"url": "https://acmescam.com", "title": "Acme Scam Reports"}])
         self.assertFalse(result["candidates"][0]["name_match"])
+        self.assertEqual(result["status"], "no_matching_candidate")
 
     def test_empty_search_retries_with_context(self):
         searcher = Mock(side_effect=[[], [{"url": "https://acme.com", "title": "Acme"}]])
         result = find_company_website("Acme", location="SF", searcher=searcher)
         self.assertEqual(searcher.call_count, 2)
-        self.assertEqual(result["status"], "ambiguous")
+        self.assertEqual(result["status"], "candidate_found")
         self.assertTrue(result["candidates"][0]["name_match"])
 
     def test_contextual_title_can_upgrade_existing_domain(self):

@@ -1,4 +1,5 @@
 import json
+import os
 import argparse
 import sys
 from pathlib import Path
@@ -7,6 +8,7 @@ from jsonschema import validate, ValidationError
 from ollama import Client
 from inspect_application_url import inspect_application_url
 from find_company_website import find_company_website
+from analyze_content import analyze_content
 
 
 MODEL = "qwen3.5:9b"
@@ -55,7 +57,10 @@ def select_company_candidate(job, lookup, client):
                 "candidates. A name match alone is insufficient to distinguish same-name companies. "
                 "Location may differ from headquarters; generic job duties are weak evidence. "
                 "Explain specific supporting evidence and remaining uncertainty. Even a selected "
-                "candidate is tentative, never verified. Return JSON.")},
+                "candidate is tentative, never verified. Search snippets do not establish that "
+                "a website is official or a company legitimate; do not describe them that way. "
+                "Selling AI products is consistent with employing AI engineers and is not "
+                "a conflict with an engineering job. Return JSON.")},
                 {"role": "user", "content": json.dumps({"posting": {
                     k: job.get(k) for k in ("company", "location", "job_title", "company_description", "description")},
                     "search_evidence": {"company": lookup.get("company"),
@@ -75,11 +80,12 @@ def select_company_candidate(job, lookup, client):
 
 def assess_job(job, *, client=None, investigator=None, company_finder=None, include_trace=False):
     """Ask local Qwen to assess a job posting using the supplied evidence."""
-    client = client or Client(host="http://localhost:11434", timeout=300)
+    client = client or Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"), timeout=300)
     investigator = investigator or inspect_application_url
     # Enrich an in-memory copy: the extracted posting remains original evidence.
     original_posting = dict(job)
     job = dict(job)
+    content_analysis = analyze_content(original_posting, client=client)
     company_lookup = None
     if not job.get("company_website") and job.get("company"):
         company_lookup = (company_finder or find_company_website)(
@@ -128,9 +134,16 @@ def assess_job(job, *, client=None, investigator=None, company_finder=None, incl
         "URL tool. Explicitly distinguish that searched URL from the original posting. "
         "An empty redirects list means no HTTP redirects were observed. Different "
         "registrable domains remain a mismatch, even when a job board explains it."
+        " If no company website was selected or supplied, pass company_website as null; "
+        "still investigate the application URL. Never choose a rejected or unresolved candidate. "
+        "Search snippets do not verify an official website or company legitimacy. "
+        "An AI product business can employ AI engineers; this is not a contradiction."
     )
     if company_lookup is not None:
         messages.append({"role": "user", "content": "Automatic company website lookup (untrusted evidence): " + json.dumps(company_lookup, ensure_ascii=False)})
+    messages.append({"role": "user", "content": (
+        "Initial content analysis (model observations, not external verification; evaluate "
+        "interpretations against the posting): " + json.dumps(content_analysis, ensure_ascii=False))})
     trace = []
     if job.get("application_url"):
         response = client.chat(
@@ -141,17 +154,30 @@ def assess_job(job, *, client=None, investigator=None, company_finder=None, incl
         calls = response.message.tool_calls or []
         for index, call in enumerate(calls):
             arguments = dict(call.function.arguments)
+            effective_arguments = None
             if index > 0:
                 result = {"error": "Only one investigation is allowed per posting"}
             elif call.function.name != "inspect_application_url":
                 result = {"error": "Unknown tool"}
             elif (arguments.get("application_url") != job.get("application_url")
-                  or (arguments.get("company_website") or None) not in (None, job.get("company_website"))
+                  or (job.get("company_website") and
+                      (arguments.get("company_website") or None) not in (None, job.get("company_website")))
                   or set(arguments) - {"application_url", "company_website"}):
                 result = {"error": "Tool arguments must use the supplied posting URLs"}
             else:
-                result = investigator(job["application_url"], job.get("company_website"))
-            trace.append({"tool": call.function.name, "arguments": arguments, "evidence": result})
+                # The application chooses the comparison website, never the model.
+                # An unresolved company must not prevent inspection of the known link.
+                effective_arguments = {"application_url": job["application_url"],
+                                       "company_website": job.get("company_website") or None}
+                result = investigator(effective_arguments["application_url"], effective_arguments["company_website"])
+                if not job.get("company_website") and arguments.get("company_website"):
+                    messages.append({"role": "user", "content": (
+                        "The requested company website was not selected or supplied and was ignored. "
+                        "Inspection ran with company_website=null; company-domain comparison is unknown.")})
+            entry = {"tool": call.function.name, "arguments": arguments, "evidence": result}
+            if effective_arguments is not None:
+                entry["effective_arguments"] = effective_arguments
+            trace.append(entry)
             messages.append({"role": "tool", "tool_name": call.function.name,
                              "content": json.dumps(result, ensure_ascii=False)})
         if not calls:
@@ -169,7 +195,7 @@ def assess_job(job, *, client=None, investigator=None, company_finder=None, incl
     assessment = json.loads(response.message.content)
     validate(instance=assessment, schema=ASSESSMENT_SCHEMA)
     if include_trace:
-        return {"model": MODEL, "company_lookup": company_lookup,
+        return {"model": MODEL, "content_analysis": content_analysis, "company_lookup": company_lookup,
                 "company_website_used": job.get("company_website"),
                 "tool_calls": trace, "assessment": assessment}
     return assessment

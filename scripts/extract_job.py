@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -167,7 +168,7 @@ Rules:
 def _extract_fields(raw_posting_text, prompt, schema):
     """Run and validate one bounded extraction pass."""
     # A local model can take a few minutes, but should not wait forever.
-    client = Client(host="http://localhost:11434", timeout=300)
+    client = Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"), timeout=300)
     response = client.chat(
         model=MODEL,
         messages=[

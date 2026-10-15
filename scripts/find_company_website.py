@@ -121,14 +121,16 @@ def find_company_website(company: str, *, location=None, job_title=None,
                     else:
                         candidates[domain] = candidate
                 result["candidates"] = list(candidates.values())
-                if result["candidates"]:
-                    result["status"] = "ambiguous"
-                # Retain ambiguity for the reasoning model; ranking is not verification.
             except (DDGSException, OSError, ValueError, TypeError, AttributeError) as error:
                 result["errors"].append(f"Contextual search failed: {error}")
     except (DDGSException, OSError, ValueError, TypeError, AttributeError) as error:
         result["status"] = "lookup_failed"
         result["errors"].append(str(error))
+    if result["status"] != "lookup_failed":
+        matches = [c for c in result["candidates"] if c["name_match"]]
+        result["company_website"] = matches[0]["website"] if len(matches) == 1 else None
+        result["status"] = ("candidate_found" if len(matches) == 1 else
+                            "ambiguous" if len(matches) > 1 else "no_matching_candidate")
     return result
 
 
