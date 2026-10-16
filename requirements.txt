@@ -4,3 +4,4 @@ jsonschema
 httpx
 tldextract
 ddgs>=9.16,<10
+pypdf>=6,<7

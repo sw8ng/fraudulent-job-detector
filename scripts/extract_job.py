@@ -220,20 +220,22 @@ if __name__ == "__main__":
         output_dir.mkdir(parents=True, exist_ok=True)
         html_files = []
         for path in sorted(input_dir.iterdir()):
-            if path.is_file() and path.suffix.lower() == ".html":
+            if path.is_file() and path.suffix.lower() in (".html", ".pdf"):
                 html_files.append(path)
     except OSError as error:
         print(f"Error preparing folders: {error}", file=sys.stderr)
         sys.exit(1)
 
     if not html_files:
-        print(f"No HTML files found. Save .html files in {input_dir} and run again.")
+        print(f"No inputs found. Save .html or .pdf files in {input_dir} and run again.")
         sys.exit(0)
 
     failed = False
     for html_path in html_files:
         try:
-            output_path = output_dir / f"{html_path.stem}.json"
+            # Keep PDF outputs distinct from an HTML save of the same posting.
+            output_name = html_path.name if html_path.suffix.lower() == ".pdf" else html_path.stem
+            output_path = output_dir / f"{output_name}.json"
             if output_path.is_file():
                 print(f"Skipping {html_path.name}: output already exists.", flush=True)
                 continue

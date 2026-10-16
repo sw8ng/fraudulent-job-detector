@@ -119,8 +119,8 @@ class CompanyTests(unittest.TestCase):
         investigator = Mock(return_value={"domain_matches_company": True})
         result = assess_job(posting, company_finder=finder, client=client, investigator=investigator, include_trace=True)
         investigator.assert_called_once_with(posting["application_url"], "https://acme.org/")
-        self.assertEqual(result["company_lookup"]["selection"], selection)
-        self.assertFalse(result["company_lookup"]["verified"])
+        self.assertEqual(result["investigation"]["company_lookup"]["selection"], selection)
+        self.assertFalse(result["investigation"]["company_lookup"]["verified"])
         self.assertNotIn("company_website", posting)
 
     def test_ddgs_results_are_normalized(self):
@@ -183,7 +183,7 @@ class CompanyTests(unittest.TestCase):
         result = assess_job(posting, client=client, investigator=investigator, company_finder=finder, include_trace=True)
         investigator.assert_called_once_with(posting["application_url"], "https://acme.com/")
         self.assertIsNone(posting["company_website"])
-        self.assertEqual(result["company_lookup"], lookup)
+        self.assertEqual(result["investigation"]["company_lookup"], lookup)
         messages = client.chat.call_args.kwargs["messages"]
         self.assertIsNone(json.loads(messages[1]["content"])["company_website"])
 

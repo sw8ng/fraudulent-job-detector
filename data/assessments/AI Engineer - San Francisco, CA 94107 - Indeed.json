@@ -1,0 +1,447 @@
+{
+  "assessment": {
+    "risk_level": "insufficient evidence",
+    "summary": "The employer 'Hiresort' lacks a verified company website, and search results show two distinct domains (hiresort.app, hiresort.ai) without confirmation of a single entity. The application URL redirects to Indeed.com (HTTP 400 error observed), which is a legitimate job board but does not confirm the specific employer's identity or legitimacy. No independent verification of company identity, recruiter affiliation, or presence on a careers page was performed. Domain age and HTTPS are insufficient for validation. Gaps include unresolved domain association and lack of direct employer confirmation."
+  },
+  "claim_checks": {
+    "company_identity": {
+      "status": "not_checked",
+      "reason": "No independent company identity verification tool has run.",
+      "evidence_ids": []
+    },
+    "company_website": {
+      "status": "unresolved",
+      "reason": "Search candidates do not independently verify the employer's website.",
+      "evidence_ids": [
+        "company-search-1"
+      ]
+    },
+    "job_on_company_careers_page": {
+      "status": "not_checked",
+      "reason": "Employer association was not executed.",
+      "evidence_ids": []
+    },
+    "recruiter_affiliation": {
+      "status": "not_checked",
+      "reason": "Recruiter affiliation verification is not implemented.",
+      "evidence_ids": []
+    },
+    "application_domain": {
+      "status": "unresolved",
+      "reason": "The destination's association with the employer is unknown. A different domain may be a legitimate hiring platform, not a proven contradiction.",
+      "evidence_ids": [
+        "url-1"
+      ]
+    }
+  },
+  "key_findings": {
+    "suspicious": [],
+    "supporting": []
+  },
+  "unresolved": [
+    {
+      "claim": "company_website",
+      "status": "unresolved",
+      "reason": "Search candidates do not independently verify the employer's website.",
+      "evidence_ids": [
+        "company-search-1"
+      ]
+    },
+    {
+      "claim": "application_domain",
+      "status": "unresolved",
+      "reason": "The destination's association with the employer is unknown. A different domain may be a legitimate hiring platform, not a proven contradiction.",
+      "evidence_ids": [
+        "url-1"
+      ]
+    }
+  ],
+  "evidence_sources": [
+    {
+      "id": "posting-1",
+      "type": "supplied_posting",
+      "url": null,
+      "evidence": {
+        "source_file": "AI Engineer - San Francisco, CA 94107 - Indeed.html",
+        "company": "Hiresort",
+        "job_title": "AI Engineer",
+        "location": "San Francisco, CA 94107",
+        "company_website": null,
+        "application_url": "https://smartapply.indeed.com/beta/indeedapply/applybyapplyablejobid?indeedApplyableJobId=38de3f1a-935a-45e0-b1f2-61d43092c901-cGR4cHJvZDE&iaUid=1k369gk16gqm3801&pingbackUrl=https%3A%2F%2Fgdc.indeed.com%2Fconv%2ForgIndApp%3Fco%3DUS%26vjtk%3D1k369gk00iq4m800%26jk%3D24eb150e17e59711%26mvj%3D0%26asub%3Dmob-norsvp-noapply%26vjfrom%3Dshareddesktop_copy%26astse%3D7881c73d9b83f770%26assa%3D9352&spn=0"
+      }
+    },
+    {
+      "id": "company-search-1",
+      "type": "company_discovery",
+      "url": null,
+      "evidence": {
+        "company": "Hiresort",
+        "query": "\"Hiresort\" official company website",
+        "provider": "ddgs",
+        "company_website": null,
+        "status": "ambiguous",
+        "verified": false,
+        "candidates": [
+          {
+            "website": "https://www.hiresort.app/",
+            "source_url": "https://www.hiresort.app/",
+            "title": "HireSort | AI resume screening for hiring teams",
+            "description": "HireSort scores against the criteria and job text for that session and shows strengths, gaps, and minimum bars, so you can explain decisions, not only sort by a single number.",
+            "name_match": true,
+            "name_match_reasons": [
+              "company_name_matches_domain",
+              "company_name_matches_title_segment"
+            ],
+            "evidence": [
+              {
+                "query": "\"Hiresort\" official company website",
+                "source_url": "https://www.hiresort.app/",
+                "title": "HireSort | AI resume screening for hiring teams",
+                "description": "HireSort scores against the criteria and job text for that session and shows strengths, gaps, and minimum bars, so you can explain decisions, not only sort by a single number."
+              }
+            ]
+          },
+          {
+            "website": "https://hiresort.ai/",
+            "source_url": "https://hiresort.ai/product",
+            "title": "HireSort Product Suite - Agentic Hiring, Screening & Interviews",
+            "description": "The HireSort product suite Explore HireSort products for agentic sourcing, AI resume screening, AI phone screening, first-round interviews, resume management, and structured hiring workflows.",
+            "name_match": true,
+            "name_match_reasons": [
+              "company_name_matches_domain"
+            ],
+            "evidence": [
+              {
+                "query": "\"Hiresort\" official company website",
+                "source_url": "https://hiresort.ai/product",
+                "title": "HireSort Product Suite - Agentic Hiring, Screening & Interviews",
+                "description": "The HireSort product suite Explore HireSort products for agentic sourcing, AI resume screening, AI phone screening, first-round interviews, resume management, and structured hiring workflows."
+              },
+              {
+                "query": "\"Hiresort\" official company website",
+                "source_url": "https://hiresort.ai/product/recruitment-software",
+                "title": "AI Recruitment Software for Resume Screening in 2026 | HireSort",
+                "description": "AI recruitment software built for resume screening and shortlisting. HireSort helps recruiters, founders, and hiring managers move from scattered resumes, manual screening, and spreadsheet tracking to a faster, more structured hiring workflow. Upload resumes, screen candidates with AI, review ranked shortlists, and track candidate progress from one simple recruitment workspace."
+              },
+              {
+                "query": "\"Hiresort\" official company website",
+                "source_url": "https://hiresort.ai/product/applicant-tracking-system",
+                "title": "AI Applicant Tracking System (ATS) for Hiring Teams in 2026 | HireSort",
+                "description": "Applicant tracking system built around resume screening. HireSort helps recruiters and hiring teams move from scattered resumes and spreadsheet tracking to a simple, AI-powered applicant tracking workflow. Store resumes in one place, screen candidates against job-specific rubrics, track hiring stages, and reuse candidate profiles across future roles."
+              },
+              {
+                "query": "\"Hiresort\" official company website",
+                "source_url": "https://hiresort.ai/contact",
+                "title": "Contact HireSort - HireSort",
+                "description": "Questions about pricing, onboarding, or a custom workflow? Reach the HireSort team — a real human reads every message and replies within one business day."
+              }
+            ]
+          }
+        ],
+        "searches": [
+          {
+            "query": "\"Hiresort\" official company website",
+            "results": [
+              {
+                "url": "https://www.hiresort.app/",
+                "title": "HireSort | AI resume screening for hiring teams",
+                "description": "HireSort scores against the criteria and job text for that session and shows strengths, gaps, and minimum bars, so you can explain decisions, not only sort by a single number."
+              },
+              {
+                "url": "https://hiresort.ai/product",
+                "title": "HireSort Product Suite - Agentic Hiring, Screening & Interviews",
+                "description": "The HireSort product suite Explore HireSort products for agentic sourcing, AI resume screening, AI phone screening, first-round interviews, resume management, and structured hiring workflows."
+              },
+              {
+                "url": "https://hiresort.ai/product/recruitment-software",
+                "title": "AI Recruitment Software for Resume Screening in 2026 | HireSort",
+                "description": "AI recruitment software built for resume screening and shortlisting. HireSort helps recruiters, founders, and hiring managers move from scattered resumes, manual screening, and spreadsheet tracking to a faster, more structured hiring workflow. Upload resumes, screen candidates with AI, review ranked shortlists, and track candidate progress from one simple recruitment workspace."
+              },
+              {
+                "url": "https://hiresort.ai/product/applicant-tracking-system",
+                "title": "AI Applicant Tracking System (ATS) for Hiring Teams in 2026 | HireSort",
+                "description": "Applicant tracking system built around resume screening. HireSort helps recruiters and hiring teams move from scattered resumes and spreadsheet tracking to a simple, AI-powered applicant tracking workflow. Store resumes in one place, screen candidates against job-specific rubrics, track hiring stages, and reuse candidate profiles across future roles."
+              },
+              {
+                "url": "https://hiresort.ai/contact",
+                "title": "Contact HireSort - HireSort",
+                "description": "Questions about pricing, onboarding, or a custom workflow? Reach the HireSort team — a real human reads every message and replies within one business day."
+              }
+            ]
+          }
+        ],
+        "errors": [
+          "Contextual search failed: No results found."
+        ],
+        "selection": {
+          "selected_url": null,
+          "match_strength": "unresolved",
+          "reason": "The search results identify two distinct domains for 'Hiresort': hiresort.app (focused on AI resume screening) and hiresort.ai (focused on an agentic hiring suite). The job posting is for an 'AI Engineer' role at a company named 'Hiresort'. While the name matches, there is no evidence in the search snippets to confirm if 'Hiresort' is a single entity operating both domains or two separate companies. Furthermore, the specific location provided in the posting (San Francisco, CA 94107) and the detailed job duties are not present in the generic product descriptions of the search candidates. A name match alone is insufficient to distinguish between potential same-name entities or confirm which domain represents the hiring entity described in the posting.",
+          "remaining_uncertainty": "It is unclear if 'hiresort.app' and 'hiresort.ai' belong to the same organization or different ones. The search evidence does not link the specific job duties (e.g., building big data systems with Hadoop/Spark) to either website's product description, nor does it confirm the San Francisco location for either domain."
+        }
+      }
+    },
+    {
+      "id": "url-1",
+      "type": "url_inspection",
+      "url": "https://smartapply.indeed.com/beta/indeedapply/applybyapplyablejobid?indeedApplyableJobId=38de3f1a-935a-45e0-b1f2-61d43092c901-cGR4cHJvZDE&iaUid=1k369gk16gqm3801&pingbackUrl=https%3A%2F%2Fgdc.indeed.com%2Fconv%2ForgIndApp%3Fco%3DUS%26vjtk%3D1k369gk00iq4m800%26jk%3D24eb150e17e59711%26mvj%3D0%26asub%3Dmob-norsvp-noapply%26vjfrom%3Dshareddesktop_copy%26astse%3D7881c73d9b83f770%26assa%3D9352&spn=0",
+      "evidence": {
+        "checked_at": "2026-10-16T05:16:18.541339+00:00",
+        "original_url": "https://smartapply.indeed.com/beta/indeedapply/applybyapplyablejobid?indeedApplyableJobId=38de3f1a-935a-45e0-b1f2-61d43092c901-cGR4cHJvZDE&iaUid=1k369gk16gqm3801&pingbackUrl=https%3A%2F%2Fgdc.indeed.com%2Fconv%2ForgIndApp%3Fco%3DUS%26vjtk%3D1k369gk00iq4m800%26jk%3D24eb150e17e59711%26mvj%3D0%26asub%3Dmob-norsvp-noapply%26vjfrom%3Dshareddesktop_copy%26astse%3D7881c73d9b83f770%26assa%3D9352&spn=0",
+        "redirect_chain": [
+          "https://smartapply.indeed.com/beta/indeedapply/applybyapplyablejobid?indeedApplyableJobId=38de3f1a-935a-45e0-b1f2-61d43092c901-cGR4cHJvZDE&iaUid=1k369gk16gqm3801&pingbackUrl=https%3A%2F%2Fgdc.indeed.com%2Fconv%2ForgIndApp%3Fco%3DUS%26vjtk%3D1k369gk00iq4m800%26jk%3D24eb150e17e59711%26mvj%3D0%26asub%3Dmob-norsvp-noapply%26vjfrom%3Dshareddesktop_copy%26astse%3D7881c73d9b83f770%26assa%3D9352&spn=0"
+        ],
+        "redirects": [],
+        "final_url": "https://smartapply.indeed.com/beta/indeedapply/applybyapplyablejobid?indeedApplyableJobId=38de3f1a-935a-45e0-b1f2-61d43092c901-cGR4cHJvZDE&iaUid=1k369gk16gqm3801&pingbackUrl=https%3A%2F%2Fgdc.indeed.com%2Fconv%2ForgIndApp%3Fco%3DUS%26vjtk%3D1k369gk00iq4m800%26jk%3D24eb150e17e59711%26mvj%3D0%26asub%3Dmob-norsvp-noapply%26vjfrom%3Dshareddesktop_copy%26astse%3D7881c73d9b83f770%26assa%3D9352&spn=0",
+        "final_domain": "indeed.com",
+        "company_domain": null,
+        "domain_matches_company": null,
+        "https": true,
+        "http_status": 400,
+        "redirect_lookup_success": true,
+        "domain_created": "1998-03-30T05:00:00Z",
+        "domain_age_days": 10427,
+        "registrar": "MarkMonitor Inc.",
+        "domain_status": [
+          "client delete prohibited",
+          "client transfer prohibited",
+          "client update prohibited",
+          "server delete prohibited",
+          "server transfer prohibited",
+          "server update prohibited"
+        ],
+        "rdap_source_url": "https://rdap.verisign.com/com/v1/domain/indeed.com",
+        "lookup_success": true,
+        "errors": [
+          {
+            "stage": "http",
+            "message": "Destination returned HTTP 400; page unavailable"
+          }
+        ],
+        "limitations": [
+          "Only HTTP redirects are followed; confirmation links and JavaScript navigation are not executed."
+        ]
+      }
+    }
+  ],
+  "recommended_action": "Confirm the posting and application destination through an independently established employer channel before sharing sensitive information. This assessment does not verify legitimacy.",
+  "investigation": {
+    "model": "qwen3.5:9b",
+    "content_analysis": {
+      "status": "completed",
+      "source_field": "description",
+      "observations": [],
+      "claims_to_verify": [
+        {
+          "claim": "We are seeking a dynamic and innovative AI Engineer to join our forward-thinking technology team.",
+          "quote": "We are seeking a dynamic and innovative AI Engineer to join our forward-thinking technology team.",
+          "suggested_check": "employer_association",
+          "quote_source": "raw_posting_text"
+        },
+        {
+          "claim": "Pay: $150,000.00 - $200,000.00 per year",
+          "quote": "Pay: $150,000.00 - $200,000.00 per year",
+          "suggested_check": "employer_association",
+          "quote_source": "raw_posting_text"
+        },
+        {
+          "claim": "Work Location: Hybrid remote in San Francisco, CA 94107",
+          "quote": "Work Location: Hybrid remote in San Francisco, CA 94107",
+          "suggested_check": "employer_association",
+          "quote_source": "raw_posting_text"
+        }
+      ],
+      "limitations": [
+        "The source text contains standard job description elements (duties, skills, benefits) without explicit requests for sensitive data, upfront payments, or unusual conditions.",
+        "Employer identity is listed as 'Hiresort' but this claim remains unverified against external records.",
+        "No specific fraud-related claims were present in the provided text to trigger a 'concern' classification."
+      ],
+      "errors": []
+    },
+    "company_lookup": {
+      "company": "Hiresort",
+      "query": "\"Hiresort\" official company website",
+      "provider": "ddgs",
+      "company_website": null,
+      "status": "ambiguous",
+      "verified": false,
+      "candidates": [
+        {
+          "website": "https://www.hiresort.app/",
+          "source_url": "https://www.hiresort.app/",
+          "title": "HireSort | AI resume screening for hiring teams",
+          "description": "HireSort scores against the criteria and job text for that session and shows strengths, gaps, and minimum bars, so you can explain decisions, not only sort by a single number.",
+          "name_match": true,
+          "name_match_reasons": [
+            "company_name_matches_domain",
+            "company_name_matches_title_segment"
+          ],
+          "evidence": [
+            {
+              "query": "\"Hiresort\" official company website",
+              "source_url": "https://www.hiresort.app/",
+              "title": "HireSort | AI resume screening for hiring teams",
+              "description": "HireSort scores against the criteria and job text for that session and shows strengths, gaps, and minimum bars, so you can explain decisions, not only sort by a single number."
+            }
+          ]
+        },
+        {
+          "website": "https://hiresort.ai/",
+          "source_url": "https://hiresort.ai/product",
+          "title": "HireSort Product Suite - Agentic Hiring, Screening & Interviews",
+          "description": "The HireSort product suite Explore HireSort products for agentic sourcing, AI resume screening, AI phone screening, first-round interviews, resume management, and structured hiring workflows.",
+          "name_match": true,
+          "name_match_reasons": [
+            "company_name_matches_domain"
+          ],
+          "evidence": [
+            {
+              "query": "\"Hiresort\" official company website",
+              "source_url": "https://hiresort.ai/product",
+              "title": "HireSort Product Suite - Agentic Hiring, Screening & Interviews",
+              "description": "The HireSort product suite Explore HireSort products for agentic sourcing, AI resume screening, AI phone screening, first-round interviews, resume management, and structured hiring workflows."
+            },
+            {
+              "query": "\"Hiresort\" official company website",
+              "source_url": "https://hiresort.ai/product/recruitment-software",
+              "title": "AI Recruitment Software for Resume Screening in 2026 | HireSort",
+              "description": "AI recruitment software built for resume screening and shortlisting. HireSort helps recruiters, founders, and hiring managers move from scattered resumes, manual screening, and spreadsheet tracking to a faster, more structured hiring workflow. Upload resumes, screen candidates with AI, review ranked shortlists, and track candidate progress from one simple recruitment workspace."
+            },
+            {
+              "query": "\"Hiresort\" official company website",
+              "source_url": "https://hiresort.ai/product/applicant-tracking-system",
+              "title": "AI Applicant Tracking System (ATS) for Hiring Teams in 2026 | HireSort",
+              "description": "Applicant tracking system built around resume screening. HireSort helps recruiters and hiring teams move from scattered resumes and spreadsheet tracking to a simple, AI-powered applicant tracking workflow. Store resumes in one place, screen candidates against job-specific rubrics, track hiring stages, and reuse candidate profiles across future roles."
+            },
+            {
+              "query": "\"Hiresort\" official company website",
+              "source_url": "https://hiresort.ai/contact",
+              "title": "Contact HireSort - HireSort",
+              "description": "Questions about pricing, onboarding, or a custom workflow? Reach the HireSort team — a real human reads every message and replies within one business day."
+            }
+          ]
+        }
+      ],
+      "searches": [
+        {
+          "query": "\"Hiresort\" official company website",
+          "results": [
+            {
+              "url": "https://www.hiresort.app/",
+              "title": "HireSort | AI resume screening for hiring teams",
+              "description": "HireSort scores against the criteria and job text for that session and shows strengths, gaps, and minimum bars, so you can explain decisions, not only sort by a single number."
+            },
+            {
+              "url": "https://hiresort.ai/product",
+              "title": "HireSort Product Suite - Agentic Hiring, Screening & Interviews",
+              "description": "The HireSort product suite Explore HireSort products for agentic sourcing, AI resume screening, AI phone screening, first-round interviews, resume management, and structured hiring workflows."
+            },
+            {
+              "url": "https://hiresort.ai/product/recruitment-software",
+              "title": "AI Recruitment Software for Resume Screening in 2026 | HireSort",
+              "description": "AI recruitment software built for resume screening and shortlisting. HireSort helps recruiters, founders, and hiring managers move from scattered resumes, manual screening, and spreadsheet tracking to a faster, more structured hiring workflow. Upload resumes, screen candidates with AI, review ranked shortlists, and track candidate progress from one simple recruitment workspace."
+            },
+            {
+              "url": "https://hiresort.ai/product/applicant-tracking-system",
+              "title": "AI Applicant Tracking System (ATS) for Hiring Teams in 2026 | HireSort",
+              "description": "Applicant tracking system built around resume screening. HireSort helps recruiters and hiring teams move from scattered resumes and spreadsheet tracking to a simple, AI-powered applicant tracking workflow. Store resumes in one place, screen candidates against job-specific rubrics, track hiring stages, and reuse candidate profiles across future roles."
+            },
+            {
+              "url": "https://hiresort.ai/contact",
+              "title": "Contact HireSort - HireSort",
+              "description": "Questions about pricing, onboarding, or a custom workflow? Reach the HireSort team — a real human reads every message and replies within one business day."
+            }
+          ]
+        }
+      ],
+      "errors": [
+        "Contextual search failed: No results found."
+      ],
+      "selection": {
+        "selected_url": null,
+        "match_strength": "unresolved",
+        "reason": "The search results identify two distinct domains for 'Hiresort': hiresort.app (focused on AI resume screening) and hiresort.ai (focused on an agentic hiring suite). The job posting is for an 'AI Engineer' role at a company named 'Hiresort'. While the name matches, there is no evidence in the search snippets to confirm if 'Hiresort' is a single entity operating both domains or two separate companies. Furthermore, the specific location provided in the posting (San Francisco, CA 94107) and the detailed job duties are not present in the generic product descriptions of the search candidates. A name match alone is insufficient to distinguish between potential same-name entities or confirm which domain represents the hiring entity described in the posting.",
+        "remaining_uncertainty": "It is unclear if 'hiresort.app' and 'hiresort.ai' belong to the same organization or different ones. The search evidence does not link the specific job duties (e.g., building big data systems with Hadoop/Spark) to either website's product description, nor does it confirm the San Francisco location for either domain."
+      }
+    },
+    "employer_association": {
+      "status": "not_requested",
+      "verified": false,
+      "matches": [],
+      "limitations": [
+        "Qwen did not request employer association"
+      ]
+    },
+    "company_website_used": null,
+    "tool_calls": [
+      {
+        "tool": "inspect_application_url",
+        "arguments": {
+          "application_url": "https://smartapply.indeed.com/beta/indeedapply/applybyapplyablejobid?indeedApplyableJobId=38de3f1a-935a-45e0-b1f2-61d43092c901-cGR4cHJvZDE&iaUid=1k369gk16gqm3801&pingbackUrl=https%3A%2F%2Fgdc.indeed.com%2Fconv%2ForgIndApp%3Fco%3DUS%26vjtk%3D1k369gk00iq4m800%26jk%3D24eb150e17e59711%26mvj%3D0%26asub%3Dmob-norsvp-noapply%26vjfrom%3Dshareddesktop_copy%26astse%3D7881c73d9b83f770%26assa%3D9352&spn=0",
+          "company_website": null
+        },
+        "evidence": {
+          "checked_at": "2026-10-16T05:16:18.541339+00:00",
+          "original_url": "https://smartapply.indeed.com/beta/indeedapply/applybyapplyablejobid?indeedApplyableJobId=38de3f1a-935a-45e0-b1f2-61d43092c901-cGR4cHJvZDE&iaUid=1k369gk16gqm3801&pingbackUrl=https%3A%2F%2Fgdc.indeed.com%2Fconv%2ForgIndApp%3Fco%3DUS%26vjtk%3D1k369gk00iq4m800%26jk%3D24eb150e17e59711%26mvj%3D0%26asub%3Dmob-norsvp-noapply%26vjfrom%3Dshareddesktop_copy%26astse%3D7881c73d9b83f770%26assa%3D9352&spn=0",
+          "redirect_chain": [
+            "https://smartapply.indeed.com/beta/indeedapply/applybyapplyablejobid?indeedApplyableJobId=38de3f1a-935a-45e0-b1f2-61d43092c901-cGR4cHJvZDE&iaUid=1k369gk16gqm3801&pingbackUrl=https%3A%2F%2Fgdc.indeed.com%2Fconv%2ForgIndApp%3Fco%3DUS%26vjtk%3D1k369gk00iq4m800%26jk%3D24eb150e17e59711%26mvj%3D0%26asub%3Dmob-norsvp-noapply%26vjfrom%3Dshareddesktop_copy%26astse%3D7881c73d9b83f770%26assa%3D9352&spn=0"
+          ],
+          "redirects": [],
+          "final_url": "https://smartapply.indeed.com/beta/indeedapply/applybyapplyablejobid?indeedApplyableJobId=38de3f1a-935a-45e0-b1f2-61d43092c901-cGR4cHJvZDE&iaUid=1k369gk16gqm3801&pingbackUrl=https%3A%2F%2Fgdc.indeed.com%2Fconv%2ForgIndApp%3Fco%3DUS%26vjtk%3D1k369gk00iq4m800%26jk%3D24eb150e17e59711%26mvj%3D0%26asub%3Dmob-norsvp-noapply%26vjfrom%3Dshareddesktop_copy%26astse%3D7881c73d9b83f770%26assa%3D9352&spn=0",
+          "final_domain": "indeed.com",
+          "company_domain": null,
+          "domain_matches_company": null,
+          "https": true,
+          "http_status": 400,
+          "redirect_lookup_success": true,
+          "domain_created": "1998-03-30T05:00:00Z",
+          "domain_age_days": 10427,
+          "registrar": "MarkMonitor Inc.",
+          "domain_status": [
+            "client delete prohibited",
+            "client transfer prohibited",
+            "client update prohibited",
+            "server delete prohibited",
+            "server transfer prohibited",
+            "server update prohibited"
+          ],
+          "rdap_source_url": "https://rdap.verisign.com/com/v1/domain/indeed.com",
+          "lookup_success": true,
+          "errors": [
+            {
+              "stage": "http",
+              "message": "Destination returned HTTP 400; page unavailable"
+            }
+          ],
+          "limitations": [
+            "Only HTTP redirects are followed; confirmation links and JavaScript navigation are not executed."
+          ]
+        },
+        "effective_arguments": {
+          "application_url": "https://smartapply.indeed.com/beta/indeedapply/applybyapplyablejobid?indeedApplyableJobId=38de3f1a-935a-45e0-b1f2-61d43092c901-cGR4cHJvZDE&iaUid=1k369gk16gqm3801&pingbackUrl=https%3A%2F%2Fgdc.indeed.com%2Fconv%2ForgIndApp%3Fco%3DUS%26vjtk%3D1k369gk00iq4m800%26jk%3D24eb150e17e59711%26mvj%3D0%26asub%3Dmob-norsvp-noapply%26vjfrom%3Dshareddesktop_copy%26astse%3D7881c73d9b83f770%26assa%3D9352&spn=0",
+          "company_website": null
+        }
+      }
+    ]
+  },
+  "not_checked": [
+    {
+      "claim": "company_identity",
+      "status": "not_checked",
+      "reason": "No independent company identity verification tool has run.",
+      "evidence_ids": []
+    },
+    {
+      "claim": "job_on_company_careers_page",
+      "status": "not_checked",
+      "reason": "Employer association was not executed.",
+      "evidence_ids": []
+    },
+    {
+      "claim": "recruiter_affiliation",
+      "status": "not_checked",
+      "reason": "Recruiter affiliation verification is not implemented.",
+      "evidence_ids": []
+    }
+  ]
+}

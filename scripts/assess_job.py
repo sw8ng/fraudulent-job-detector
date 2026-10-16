@@ -9,6 +9,8 @@ from ollama import Client
 from inspect_application_url import inspect_application_url
 from find_company_website import find_company_website
 from analyze_content import analyze_content
+from check_employer_association import check_employer_association
+from assessment_report import build_report
 
 
 MODEL = "qwen3.5:9b"
@@ -101,6 +103,7 @@ def assess_job(job, *, client=None, investigator=None, company_finder=None, incl
                 company_lookup["status"] = "candidate_selected"
         if company_lookup.get("company_website"):
             job["company_website"] = company_lookup["company_website"]
+    employer_association = {"status": "not_requested", "verified": False, "matches": [], "limitations": ["Qwen did not request employer association"]}
     messages = [
             {
                 "role": "system",
@@ -137,6 +140,10 @@ def assess_job(job, *, client=None, investigator=None, company_finder=None, incl
         " If no company website was selected or supplied, pass company_website as null; "
         "still investigate the application URL. Never choose a rejected or unresolved candidate. "
         "Search snippets do not verify an official website or company legitimacy. "
+        "Association matches refer to the exact matches[].url, which may be an external "
+        "hiring platform. Report it as linked from the candidate company site, not as a "
+        "posting on the company's own domain. Do not label candidate sites official or "
+        "invent numerical certainty. Registration dates belong only to final_domain. "
         "An AI product business can employ AI engineers; this is not a contradiction."
     )
     if company_lookup is not None:
@@ -145,59 +152,120 @@ def assess_job(job, *, client=None, investigator=None, company_finder=None, incl
         "Initial content analysis (model observations, not external verification; evaluate "
         "interpretations against the posting): " + json.dumps(content_analysis, ensure_ascii=False))})
     trace = []
+    available = {}
     if job.get("application_url"):
+        available["inspect_application_url"] = inspect_application_url
+    if job.get("company_website") and job.get("job_title"):
+        available["check_employer_association"] = {
+            "type": "function", "function": {
+                "name": "check_employer_association",
+                "description": "Look for a matching job on the candidate company site and linked careers pages. Use when job/employer association needs evidence. A missing match or failed check is not proof of fraud.",
+                "parameters": {"type": "object", "properties": {
+                    "company_website": {"type": "string"}, "job_title": {"type": "string"},
+                    "location": {"type": ["string", "null"]}},
+                    "required": ["company_website", "job_title"], "additionalProperties": False},
+            },
+        }
+    messages.append({"role": "user", "content": (
+        "Choose useful verification tools, or finish if no more evidence can be gathered. "
+        "Employer association is optional: request it when checking whether the claimed job "
+        "appears on the candidate company's careers site would help. Use exactly these "
+        "available posting values: " + json.dumps({k: job.get(k) for k in
+            ("company_website", "job_title", "location", "application_url")}) +
+        ". Each tool may execute once; at most two tool-selection rounds. "
+        "A matching posting supports association with a candidate site, not verified identity. "
+        "Not found or could not check is not fraud evidence." )})
+    executed = set()
+    # Two tools, once each; a second round lets Qwen act on the first result.
+    for _ in range(2):
+        remaining = [tool for name, tool in available.items() if name not in executed]
+        if not remaining:
+            break
         response = client.chat(
-            model=MODEL, messages=messages, tools=[inspect_application_url], think=False,
-            options={"temperature": 0, "num_ctx": 16384, "num_predict": 1024},
+            model=MODEL, messages=messages, tools=remaining, think=False,
+            options={"temperature": 0, "num_ctx": 32768, "num_predict": 1024},
         )
         messages.append(response.message)
         calls = response.message.tool_calls or []
-        for index, call in enumerate(calls):
+        if not calls:
+            break
+        executed_before_round = len(executed)
+        # Reply to every requested tool, but never execute duplicate checks.
+        for call in calls:
+            name = call.function.name
             arguments = dict(call.function.arguments)
             effective_arguments = None
-            if index > 0:
-                result = {"error": "Only one investigation is allowed per posting"}
-            elif call.function.name != "inspect_application_url":
-                result = {"error": "Unknown tool"}
-            elif (arguments.get("application_url") != job.get("application_url")
-                  or (job.get("company_website") and
-                      (arguments.get("company_website") or None) not in (None, job.get("company_website")))
-                  or set(arguments) - {"application_url", "company_website"}):
-                result = {"error": "Tool arguments must use the supplied posting URLs"}
+            if name not in available:
+                result = {"error": "Unknown or unavailable tool"}
+            elif name in executed:
+                result = {"error": "Duplicate tool request; use the evidence already returned"}
+            elif name == "inspect_application_url":
+                if (arguments.get("application_url") != job.get("application_url")
+                    or (job.get("company_website") and
+                        (arguments.get("company_website") or None) not in (None, job.get("company_website")))
+                    or set(arguments) - {"application_url", "company_website"}):
+                    result = {"error": "Tool arguments must use the supplied posting URLs"}
+                else:
+                    effective_arguments = {"application_url": job["application_url"],
+                                           "company_website": job.get("company_website") or None}
+                    result = investigator(effective_arguments["application_url"], effective_arguments["company_website"])
+                    executed.add(name)
             else:
-                # The application chooses the comparison website, never the model.
-                # An unresolved company must not prevent inspection of the known link.
-                effective_arguments = {"application_url": job["application_url"],
-                                       "company_website": job.get("company_website") or None}
-                result = investigator(effective_arguments["application_url"], effective_arguments["company_website"])
-                if not job.get("company_website") and arguments.get("company_website"):
-                    messages.append({"role": "user", "content": (
-                        "The requested company website was not selected or supplied and was ignored. "
-                        "Inspection ran with company_website=null; company-domain comparison is unknown.")})
-            entry = {"tool": call.function.name, "arguments": arguments, "evidence": result}
+                expected = {"company_website": job["company_website"],
+                            "job_title": job["job_title"], "location": job.get("location")}
+                if (arguments.get("company_website") != expected["company_website"]
+                    or arguments.get("job_title") != expected["job_title"]
+                    or arguments.get("location") not in (None, expected["location"])
+                    or set(arguments) - set(expected)):
+                    result = {"error": "Association arguments must match the selected website and posting"}
+                else:
+                    effective_arguments = expected
+                    result = check_employer_association(**expected)
+                    employer_association = result
+                    executed.add(name)
+            entry = {"tool": name, "arguments": arguments, "evidence": result}
             if effective_arguments is not None:
                 entry["effective_arguments"] = effective_arguments
             trace.append(entry)
-            messages.append({"role": "tool", "tool_name": call.function.name,
+            messages.append({"role": "tool", "tool_name": name,
                              "content": json.dumps(result, ensure_ascii=False)})
-        if not calls:
-            messages.append({"role": "user", "content": "No tool was called; explicitly state that no external URL investigation was performed."})
-    messages.append({"role": "user", "content": "Return the final risk assessment as JSON using the posting and any returned evidence."})
+        if len(executed) == executed_before_round:
+            break
+    messages.append({"role": "user", "content": "Verification is finished. Only these tools actually executed: " +
+        json.dumps(sorted(executed)) + ". All other checks remain unperformed; disclose relevant gaps. "
+        "Two selection rounds and at most one execution per tool are allowed."})
+    investigation = {"model": MODEL, "content_analysis": content_analysis, "company_lookup": company_lookup,
+                     "employer_association": employer_association,
+                     "company_website_used": job.get("company_website"), "tool_calls": trace}
+    grounded = build_report(original_posting, {"risk_level": "insufficient evidence", "explanation": ""}, investigation)
+    messages.append({"role": "user", "content": (
+        "Return the final risk assessment as JSON. These check statuses are derived from actual "
+        "execution and constrain your explanation: " + json.dumps(grounded["claim_checks"]) +
+        ". Cite observed facts accurately; not_checked is not a failed verification. A supported "
+        "claim supports only the narrowly stated check, not employer legitimacy. Do not upgrade "
+        "unresolved claims to supported or conflicting. Do not claim market salary verification. "
+        "Keep the explanation to at most 150 words; do not reproduce the posting or long URLs.")})
     response = client.chat(
         model=MODEL,
         messages=messages,
         format=ASSESSMENT_SCHEMA,
         think=False,
-        options={"temperature": 0, "num_ctx": 16384},
+        options={"temperature": 0, "num_ctx": 32768, "num_predict": 1024},
     )
     if response.done_reason == "length":
-        raise ValueError("The model stopped before finishing the assessment")
+        # Retry only the final generation, retaining evidence without rerunning tools.
+        response = client.chat(
+            model=MODEL, messages=messages + [{"role": "user", "content":
+                "The previous generation was truncated. Return only a complete JSON object with risk_level and a concise explanation."}],
+            format=ASSESSMENT_SCHEMA, think=False,
+            options={"temperature": 0, "num_ctx": 32768, "num_predict": 2048},
+        )
+        if response.done_reason == "length":
+            raise ValueError("The final assessment was truncated again after one retry; no partial assessment was saved")
     assessment = json.loads(response.message.content)
     validate(instance=assessment, schema=ASSESSMENT_SCHEMA)
     if include_trace:
-        return {"model": MODEL, "content_analysis": content_analysis, "company_lookup": company_lookup,
-                "company_website_used": job.get("company_website"),
-                "tool_calls": trace, "assessment": assessment}
+        return build_report(original_posting, assessment, investigation)
     return assessment
 
 

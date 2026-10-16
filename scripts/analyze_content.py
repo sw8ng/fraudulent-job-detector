@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 
 from jsonschema import validate
@@ -32,10 +33,32 @@ CONTENT_SCHEMA = {
 }
 
 
+def match_quote(quote, source):
+    """Allow layout whitespace differences, preserving the original source quote."""
+    if not quote.strip():
+        return None
+    pattern = r"\s+".join(re.escape(part) for part in quote.split())
+    return re.search(pattern, source)
+
+
+def explicit_request_concern(quote, surrounding_text):
+    """Two narrow checks; negations and reported warnings stay with the model."""
+    context = surrounding_text.casefold().replace("’", "'")
+    if re.search(r"\b(?:not|never|avoid|don't|do not|won't|warning|scam|example)\b", context):
+        return False
+    text = " ".join(quote.casefold().split())
+    password = re.search(r"\b(?:send|share|provide)\s+(?:us\s+)?your\s+bank\s+password\b", text)
+    gift_card = (re.search(r"\b(?:send|pay)\b", text) and
+                 re.search(r"\b(?:deposit|fee|payment)\b", text) and "gift card" in text)
+    return bool(password or gift_card)
+
+
 def analyze_content(job, *, client=None):
     """Return initial observations; keep only quotes present in the source text."""
-    source = job.get("raw_posting_text") or job.get("description") or ""
-    source_field = "raw_posting_text" if job.get("raw_posting_text") else "description"
+    source = job.get("description") or job.get("raw_posting_text") or ""
+    source_field = "description" if job.get("description") else "raw_posting_text"
+    # The extracted description focuses the model; original text validates quotes.
+    original = job.get("raw_posting_text") or source
     result = {"status": "no_text", "source_field": source_field,
               "observations": [], "claims_to_verify": [], "limitations": [], "errors": []}
     if not isinstance(source, str) or not source.strip():
@@ -52,6 +75,16 @@ def analyze_content(job, *, client=None):
             "demand from 'we never charge fees', employee duties handling money from applicant "
             "payments, and ordinary application data from requests for bank details or passwords. "
             "Ignore job-board navigation, premium offers, recommended jobs, and unrelated listings. "
+            "Include only employer-posting observations; omit platform promotions even as context. "
+            "An absence of warning signs is not proof of legitimacy. "
+            "Assessment meanings: concern = an explicit risky request in the text, even when "
+            "employer identity is unknown; context = a benign or negated request; uncertain = "
+            "the passage itself is ambiguous. A gift-card equipment deposit before interview "
+            "is a payment concern. Asking for a bank password is a sensitive_data concern. "
+            "The payment category is for applicant payments, not wages, benefits or visa policy. "
+            "Omit ordinary compensation/benefits/visa disclosures unless a specific fraud-related "
+            "claim is present. Classify ordinary salary information under salary_requirements "
+            "only if there is a concrete concern; do not generate generic reassuring observations. "
             "Remote work, high pay, missing fields, or easy requirements alone do not establish "
             "fraud. Do not invent market salary comparisons or claim employer legitimacy. "
             "Use [] when there are no relevant observations. Extract employer, recruiter, or "
@@ -69,10 +102,26 @@ def analyze_content(job, *, client=None):
     result.update(status="completed", limitations=analysis["limitations"])
     for field in ("observations", "claims_to_verify"):
         for item in analysis[field]:
-            if item["quote"].strip() and item["quote"] in source:
+            quote = item["quote"]
+            if re.fullmatch(r"(?:Try (?:Premium|1 month of Premium) for \$0|Promoted by hirer\s*[·|]\s*Responses managed off LinkedIn)", quote.strip(), re.IGNORECASE):
+                continue
+            focused_match = match_quote(quote, source)
+            original_match = match_quote(quote, original)
+            if focused_match and original_match:
+                item = dict(item)
+                item["quote"] = original_match.group()
+                item["quote_source"] = "raw_posting_text" if job.get("raw_posting_text") else source_field
+                # Keep the source sentence, so a clipped quote cannot remove a negation.
+                start = original.rfind(".", 0, original_match.start()) + 1
+                end = original.find(".", original_match.end())
+                sentence = original[start:end if end >= 0 else len(original)]
+                if field == "observations" and explicit_request_concern(item["quote"], sentence):
+                    item["model_assessment"] = item["assessment"]
+                    item["assessment"] = "concern"
+                    item["assessment_origin"] = "explicit_request_rule"
                 result[field].append(item)
             else:
-                result["errors"].append(f"Dropped {field} item: quote not found verbatim in {source_field}")
+                result["errors"].append(f"Dropped {field} item: quote not found in analysis text and original source (whitespace differences allowed)")
     if result["errors"]:
         result["status"] = "partial"
         result["limitations"].append("Some model statements were excluded because their quotes could not be validated")

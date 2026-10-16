@@ -1,0 +1,500 @@
+{
+  "assessment": {
+    "risk_level": "low",
+    "summary": "The job is posted on LinkedIn, a legitimate hiring platform, and lists Roblox as the employer. The application URL redirects to LinkedIn (linkedin.com), which does not match the candidate company website (roblox.com); this domain mismatch is expected for third-party boards and is not fraud evidence. A search identified https://www.roblox.com/ as a candidate official site, but we did not verify its ownership or confirm the job appears on Roblox’s careers page; absence there is not a contradiction. No sensitive data requests or upfront payments were observed. While company identity and website association remain unverified, the context (LinkedIn posting, known tech company) suggests low risk."
+  },
+  "claim_checks": {
+    "company_identity": {
+      "status": "not_checked",
+      "reason": "No independent company identity verification tool has run.",
+      "evidence_ids": []
+    },
+    "company_website": {
+      "status": "unresolved",
+      "reason": "A supplied or selected candidate website is available, but its ownership/association with the claimed employer is unverified.",
+      "evidence_ids": [
+        "company-search-1"
+      ]
+    },
+    "job_on_company_careers_page": {
+      "status": "unresolved",
+      "reason": "The bounded check did not establish a match (not_found_in_checked_pages); absence or failed access is not a contradiction.",
+      "evidence_ids": [
+        "association-1"
+      ]
+    },
+    "recruiter_affiliation": {
+      "status": "not_checked",
+      "reason": "Recruiter affiliation verification is not implemented.",
+      "evidence_ids": []
+    },
+    "application_domain": {
+      "status": "unresolved",
+      "reason": "The destination's association with the employer is unknown. A different domain may be a legitimate hiring platform, not a proven contradiction.",
+      "evidence_ids": [
+        "url-1"
+      ]
+    }
+  },
+  "key_findings": {
+    "suspicious": [],
+    "supporting": []
+  },
+  "unresolved": [
+    {
+      "claim": "company_website",
+      "status": "unresolved",
+      "reason": "A supplied or selected candidate website is available, but its ownership/association with the claimed employer is unverified.",
+      "evidence_ids": [
+        "company-search-1"
+      ]
+    },
+    {
+      "claim": "job_on_company_careers_page",
+      "status": "unresolved",
+      "reason": "The bounded check did not establish a match (not_found_in_checked_pages); absence or failed access is not a contradiction.",
+      "evidence_ids": [
+        "association-1"
+      ]
+    },
+    {
+      "claim": "application_domain",
+      "status": "unresolved",
+      "reason": "The destination's association with the employer is unknown. A different domain may be a legitimate hiring platform, not a proven contradiction.",
+      "evidence_ids": [
+        "url-1"
+      ]
+    }
+  ],
+  "evidence_sources": [
+    {
+      "id": "posting-1",
+      "type": "supplied_posting",
+      "url": "https://www.linkedin.com/jobs/view/4449149254/",
+      "evidence": {
+        "source_file": "[Summer 2027] Software Engineer Intern _ Roblox _ LinkedIn.pdf",
+        "company": "Roblox",
+        "job_title": "[Summer 2027] Software Engineer Intern",
+        "location": "San Mateo, CA",
+        "company_website": null,
+        "application_url": "https://www.linkedin.com/jobs/view/4449149254/"
+      }
+    },
+    {
+      "id": "company-search-1",
+      "type": "company_discovery",
+      "url": null,
+      "evidence": {
+        "company": "Roblox",
+        "query": "\"Roblox\" official company website",
+        "provider": "ddgs",
+        "company_website": "https://www.roblox.com/",
+        "status": "candidate_selected",
+        "verified": false,
+        "candidates": [
+          {
+            "website": "https://d3fel7ao8ljmgc.cloudfront.net/",
+            "source_url": "https://d3fel7ao8ljmgc.cloudfront.net/",
+            "title": "About | Roblox",
+            "description": "Roblox is a global platform where millions of people gather together every day to imagine, create, and share experiences with each other in immersive, user-generated 3D worlds.",
+            "name_match": true,
+            "name_match_reasons": [
+              "company_name_matches_title_segment"
+            ],
+            "evidence": [
+              {
+                "query": "\"Roblox\" official company website",
+                "source_url": "https://d3fel7ao8ljmgc.cloudfront.net/",
+                "title": "About | Roblox",
+                "description": "Roblox is a global platform where millions of people gather together every day to imagine, create, and share experiences with each other in immersive, user-generated 3D worlds."
+              }
+            ]
+          },
+          {
+            "website": "https://www.roblox.com/",
+            "source_url": "https://www.roblox.com/newlogin?App",
+            "title": "Log in to Roblox",
+            "description": "©2026 Roblox Corporation. Roblox, the Roblox logo and Powering Imagination are among our registered and unregistered trademarks in the U.S. and other countries.",
+            "name_match": true,
+            "name_match_reasons": [
+              "company_name_matches_domain"
+            ],
+            "evidence": [
+              {
+                "query": "\"Roblox\" official company website",
+                "source_url": "https://www.roblox.com/newlogin?App",
+                "title": "Log in to Roblox",
+                "description": "©2026 Roblox Corporation. Roblox, the Roblox logo and Powering Imagination are among our registered and unregistered trademarks in the U.S. and other countries."
+              }
+            ]
+          },
+          {
+            "website": "https://playgama.com/",
+            "source_url": "https://playgama.com/blog/game-faqs/what-is-the-official-url-for-roblox-website/",
+            "title": "What is the official URL for Roblox website? - Playgama Blog",
+            "description": "TL;DR The official Roblox website is https://www.roblox.com, which serves as the main hub for all Roblox activities including gaming, account management, and community features.",
+            "name_match": false,
+            "name_match_reasons": [],
+            "evidence": [
+              {
+                "query": "\"Roblox\" official company website",
+                "source_url": "https://playgama.com/blog/game-faqs/what-is-the-official-url-for-roblox-website/",
+                "title": "What is the official URL for Roblox website? - Playgama Blog",
+                "description": "TL;DR The official Roblox website is https://www.roblox.com, which serves as the main hub for all Roblox activities including gaming, account management, and community features."
+              }
+            ]
+          }
+        ],
+        "searches": [
+          {
+            "query": "\"Roblox\" official company website",
+            "results": [
+              {
+                "url": "https://en.wikipedia.org/wiki/Roblox_Corporation",
+                "title": "Roblox Corporation - Wikipedia",
+                "description": "The Roblox Corporation (/ ˈroʊ.blɒks / ⓘ, ROH-bloks) is an American video game developer based in San Mateo, California. Founded in 2004 by David Baszucki and Erik Cassel, the company is the developer of Roblox, a game platform, which was released in 2006. As of December 31, 2024, the company employs over 2,400 people. [2]"
+              },
+              {
+                "url": "https://en.wikipedia.org/wiki/Roblox",
+                "title": "Roblox - Wikipedia",
+                "description": "The Roblox app icon since 2025 Roblox is an online game platform and game creation system built around user-generated content and games. [1][2] Games can be created by any user through the platform's game engine, Roblox Studio, [3] and then shared to and played by other players. [1] The games featured on Roblox vary in genre, from role-playing video games to ones centered around escaping ..."
+              },
+              {
+                "url": "https://d3fel7ao8ljmgc.cloudfront.net/",
+                "title": "About | Roblox",
+                "description": "Roblox is a global platform where millions of people gather together every day to imagine, create, and share experiences with each other in immersive, user-generated 3D worlds."
+              },
+              {
+                "url": "https://www.roblox.com/newlogin?App",
+                "title": "Log in to Roblox",
+                "description": "©2026 Roblox Corporation. Roblox, the Roblox logo and Powering Imagination are among our registered and unregistered trademarks in the U.S. and other countries."
+              },
+              {
+                "url": "https://playgama.com/blog/game-faqs/what-is-the-official-url-for-roblox-website/",
+                "title": "What is the official URL for Roblox website? - Playgama Blog",
+                "description": "TL;DR The official Roblox website is https://www.roblox.com, which serves as the main hub for all Roblox activities including gaming, account management, and community features."
+              }
+            ]
+          }
+        ],
+        "errors": [
+          "Contextual search failed: No results found."
+        ],
+        "selection": {
+          "selected_url": "https://www.roblox.com/",
+          "match_strength": "tentative",
+          "reason": "The candidate URL 'https://www.roblox.com/' contains the exact company name 'Roblox' in its domain, which is a strong indicator of an official website compared to generic cloudfront subdomains. The search evidence confirms this domain hosts login pages and copyright notices for 'Roblox Corporation'. While the posting mentions a headquarters in San Mateo, CA, the provided search snippets do not explicitly confirm the physical location of the selected URL's server or office presence, nor do they distinguish between different entities named Roblox (though none are evident). The other candidate ('https://d3fel7ao8ljmgc.cloudfront.net/') is a generic cloud storage domain that merely hosts content for Roblox but lacks the direct corporate identity of the primary domain. No evidence suggests these are different companies; however, without explicit confirmation that 'www.roblox.com' corresponds to the specific legal entity hiring in San Mateo (as opposed to a global brand umbrella), the selection remains tentative based on standard web conventions.",
+          "remaining_uncertainty": "The search snippets do not explicitly verify that 'https://www.roblox.com/' is the specific operational website for the San Mateo, CA headquarters mentioned in the job posting, nor do they rule out the existence of a separate legal entity with the same name operating elsewhere. The generic cloudfront URL is likely a content delivery endpoint rather than the primary corporate site, making it a weaker candidate despite the name match."
+        }
+      }
+    },
+    {
+      "id": "association-1",
+      "type": "employer_association",
+      "url": "https://www.roblox.com/",
+      "evidence": {
+        "status": "not_found_in_checked_pages",
+        "company_website": "https://www.roblox.com/",
+        "job_title": "[Summer 2027] Software Engineer Intern",
+        "location": "San Mateo, CA",
+        "verified": false,
+        "matches": [],
+        "pages_checked": [
+          {
+            "requested_url": "https://www.roblox.com/",
+            "url": "https://www.roblox.com/",
+            "heading_match": null,
+            "location_match": false
+          }
+        ],
+        "errors": [],
+        "limitations": [
+          "Company website is an unverified candidate or supplied claim.",
+          "Checks at most four HTML pages, without JavaScript or login; absence is not fraud evidence."
+        ]
+      }
+    },
+    {
+      "id": "url-1",
+      "type": "url_inspection",
+      "url": "https://www.linkedin.com/jobs/view/4449149254/",
+      "evidence": {
+        "checked_at": "2026-10-16T05:18:21.520434+00:00",
+        "original_url": "https://www.linkedin.com/jobs/view/4449149254/",
+        "redirect_chain": [
+          "https://www.linkedin.com/jobs/view/4449149254/"
+        ],
+        "redirects": [],
+        "final_url": "https://www.linkedin.com/jobs/view/4449149254/",
+        "final_domain": "linkedin.com",
+        "company_domain": "roblox.com",
+        "domain_matches_company": false,
+        "https": true,
+        "http_status": 200,
+        "redirect_lookup_success": true,
+        "domain_created": "2002-11-02T15:38:11Z",
+        "domain_age_days": 8748,
+        "registrar": "MarkMonitor Inc.",
+        "domain_status": [
+          "client delete prohibited",
+          "client transfer prohibited",
+          "client update prohibited",
+          "server delete prohibited",
+          "server transfer prohibited",
+          "server update prohibited"
+        ],
+        "rdap_source_url": "https://rdap.verisign.com/com/v1/domain/linkedin.com",
+        "lookup_success": true,
+        "errors": [],
+        "limitations": [
+          "Only HTTP redirects are followed; confirmation links and JavaScript navigation are not executed."
+        ]
+      }
+    }
+  ],
+  "recommended_action": "Confirm the posting and application destination through an independently established employer channel before sharing sensitive information. This assessment does not verify legitimacy.",
+  "investigation": {
+    "model": "qwen3.5:9b",
+    "content_analysis": {
+      "status": "completed",
+      "source_field": "description",
+      "observations": [],
+      "claims_to_verify": [
+        {
+          "claim": "starting base pay for this position is as shown below",
+          "quote": "$62—$62 USD",
+          "suggested_check": "employer_association",
+          "quote_source": "raw_posting_text"
+        },
+        {
+          "claim": "Company may not be able to employ candidates for this role who have United States work authorization related to certain U.S. visa categories, or support future H-1B sponsorship at this time.",
+          "quote": "For US based roles only, please note the Company may not be able to employ candidates for this role who have United \nStates work authorization related to certain U.S. visa categories, or support future H-1B sponsorship at this time.",
+          "suggested_check": "employer_association",
+          "quote_source": "raw_posting_text"
+        }
+      ],
+      "limitations": [
+        "The source text does not contain explicit requests for sensitive data (e.g., bank passwords), upfront payments, or gift card deposits."
+      ],
+      "errors": []
+    },
+    "company_lookup": {
+      "company": "Roblox",
+      "query": "\"Roblox\" official company website",
+      "provider": "ddgs",
+      "company_website": "https://www.roblox.com/",
+      "status": "candidate_selected",
+      "verified": false,
+      "candidates": [
+        {
+          "website": "https://d3fel7ao8ljmgc.cloudfront.net/",
+          "source_url": "https://d3fel7ao8ljmgc.cloudfront.net/",
+          "title": "About | Roblox",
+          "description": "Roblox is a global platform where millions of people gather together every day to imagine, create, and share experiences with each other in immersive, user-generated 3D worlds.",
+          "name_match": true,
+          "name_match_reasons": [
+            "company_name_matches_title_segment"
+          ],
+          "evidence": [
+            {
+              "query": "\"Roblox\" official company website",
+              "source_url": "https://d3fel7ao8ljmgc.cloudfront.net/",
+              "title": "About | Roblox",
+              "description": "Roblox is a global platform where millions of people gather together every day to imagine, create, and share experiences with each other in immersive, user-generated 3D worlds."
+            }
+          ]
+        },
+        {
+          "website": "https://www.roblox.com/",
+          "source_url": "https://www.roblox.com/newlogin?App",
+          "title": "Log in to Roblox",
+          "description": "©2026 Roblox Corporation. Roblox, the Roblox logo and Powering Imagination are among our registered and unregistered trademarks in the U.S. and other countries.",
+          "name_match": true,
+          "name_match_reasons": [
+            "company_name_matches_domain"
+          ],
+          "evidence": [
+            {
+              "query": "\"Roblox\" official company website",
+              "source_url": "https://www.roblox.com/newlogin?App",
+              "title": "Log in to Roblox",
+              "description": "©2026 Roblox Corporation. Roblox, the Roblox logo and Powering Imagination are among our registered and unregistered trademarks in the U.S. and other countries."
+            }
+          ]
+        },
+        {
+          "website": "https://playgama.com/",
+          "source_url": "https://playgama.com/blog/game-faqs/what-is-the-official-url-for-roblox-website/",
+          "title": "What is the official URL for Roblox website? - Playgama Blog",
+          "description": "TL;DR The official Roblox website is https://www.roblox.com, which serves as the main hub for all Roblox activities including gaming, account management, and community features.",
+          "name_match": false,
+          "name_match_reasons": [],
+          "evidence": [
+            {
+              "query": "\"Roblox\" official company website",
+              "source_url": "https://playgama.com/blog/game-faqs/what-is-the-official-url-for-roblox-website/",
+              "title": "What is the official URL for Roblox website? - Playgama Blog",
+              "description": "TL;DR The official Roblox website is https://www.roblox.com, which serves as the main hub for all Roblox activities including gaming, account management, and community features."
+            }
+          ]
+        }
+      ],
+      "searches": [
+        {
+          "query": "\"Roblox\" official company website",
+          "results": [
+            {
+              "url": "https://en.wikipedia.org/wiki/Roblox_Corporation",
+              "title": "Roblox Corporation - Wikipedia",
+              "description": "The Roblox Corporation (/ ˈroʊ.blɒks / ⓘ, ROH-bloks) is an American video game developer based in San Mateo, California. Founded in 2004 by David Baszucki and Erik Cassel, the company is the developer of Roblox, a game platform, which was released in 2006. As of December 31, 2024, the company employs over 2,400 people. [2]"
+            },
+            {
+              "url": "https://en.wikipedia.org/wiki/Roblox",
+              "title": "Roblox - Wikipedia",
+              "description": "The Roblox app icon since 2025 Roblox is an online game platform and game creation system built around user-generated content and games. [1][2] Games can be created by any user through the platform's game engine, Roblox Studio, [3] and then shared to and played by other players. [1] The games featured on Roblox vary in genre, from role-playing video games to ones centered around escaping ..."
+            },
+            {
+              "url": "https://d3fel7ao8ljmgc.cloudfront.net/",
+              "title": "About | Roblox",
+              "description": "Roblox is a global platform where millions of people gather together every day to imagine, create, and share experiences with each other in immersive, user-generated 3D worlds."
+            },
+            {
+              "url": "https://www.roblox.com/newlogin?App",
+              "title": "Log in to Roblox",
+              "description": "©2026 Roblox Corporation. Roblox, the Roblox logo and Powering Imagination are among our registered and unregistered trademarks in the U.S. and other countries."
+            },
+            {
+              "url": "https://playgama.com/blog/game-faqs/what-is-the-official-url-for-roblox-website/",
+              "title": "What is the official URL for Roblox website? - Playgama Blog",
+              "description": "TL;DR The official Roblox website is https://www.roblox.com, which serves as the main hub for all Roblox activities including gaming, account management, and community features."
+            }
+          ]
+        }
+      ],
+      "errors": [
+        "Contextual search failed: No results found."
+      ],
+      "selection": {
+        "selected_url": "https://www.roblox.com/",
+        "match_strength": "tentative",
+        "reason": "The candidate URL 'https://www.roblox.com/' contains the exact company name 'Roblox' in its domain, which is a strong indicator of an official website compared to generic cloudfront subdomains. The search evidence confirms this domain hosts login pages and copyright notices for 'Roblox Corporation'. While the posting mentions a headquarters in San Mateo, CA, the provided search snippets do not explicitly confirm the physical location of the selected URL's server or office presence, nor do they distinguish between different entities named Roblox (though none are evident). The other candidate ('https://d3fel7ao8ljmgc.cloudfront.net/') is a generic cloud storage domain that merely hosts content for Roblox but lacks the direct corporate identity of the primary domain. No evidence suggests these are different companies; however, without explicit confirmation that 'www.roblox.com' corresponds to the specific legal entity hiring in San Mateo (as opposed to a global brand umbrella), the selection remains tentative based on standard web conventions.",
+        "remaining_uncertainty": "The search snippets do not explicitly verify that 'https://www.roblox.com/' is the specific operational website for the San Mateo, CA headquarters mentioned in the job posting, nor do they rule out the existence of a separate legal entity with the same name operating elsewhere. The generic cloudfront URL is likely a content delivery endpoint rather than the primary corporate site, making it a weaker candidate despite the name match."
+      }
+    },
+    "employer_association": {
+      "status": "not_found_in_checked_pages",
+      "company_website": "https://www.roblox.com/",
+      "job_title": "[Summer 2027] Software Engineer Intern",
+      "location": "San Mateo, CA",
+      "verified": false,
+      "matches": [],
+      "pages_checked": [
+        {
+          "requested_url": "https://www.roblox.com/",
+          "url": "https://www.roblox.com/",
+          "heading_match": null,
+          "location_match": false
+        }
+      ],
+      "errors": [],
+      "limitations": [
+        "Company website is an unverified candidate or supplied claim.",
+        "Checks at most four HTML pages, without JavaScript or login; absence is not fraud evidence."
+      ]
+    },
+    "company_website_used": "https://www.roblox.com/",
+    "tool_calls": [
+      {
+        "tool": "inspect_application_url",
+        "arguments": {
+          "application_url": "https://www.linkedin.com/jobs/view/4449149254/",
+          "company_website": "https://www.roblox.com/"
+        },
+        "evidence": {
+          "checked_at": "2026-10-16T05:18:21.520434+00:00",
+          "original_url": "https://www.linkedin.com/jobs/view/4449149254/",
+          "redirect_chain": [
+            "https://www.linkedin.com/jobs/view/4449149254/"
+          ],
+          "redirects": [],
+          "final_url": "https://www.linkedin.com/jobs/view/4449149254/",
+          "final_domain": "linkedin.com",
+          "company_domain": "roblox.com",
+          "domain_matches_company": false,
+          "https": true,
+          "http_status": 200,
+          "redirect_lookup_success": true,
+          "domain_created": "2002-11-02T15:38:11Z",
+          "domain_age_days": 8748,
+          "registrar": "MarkMonitor Inc.",
+          "domain_status": [
+            "client delete prohibited",
+            "client transfer prohibited",
+            "client update prohibited",
+            "server delete prohibited",
+            "server transfer prohibited",
+            "server update prohibited"
+          ],
+          "rdap_source_url": "https://rdap.verisign.com/com/v1/domain/linkedin.com",
+          "lookup_success": true,
+          "errors": [],
+          "limitations": [
+            "Only HTTP redirects are followed; confirmation links and JavaScript navigation are not executed."
+          ]
+        },
+        "effective_arguments": {
+          "application_url": "https://www.linkedin.com/jobs/view/4449149254/",
+          "company_website": "https://www.roblox.com/"
+        }
+      },
+      {
+        "tool": "check_employer_association",
+        "arguments": {
+          "company_website": "https://www.roblox.com/",
+          "job_title": "[Summer 2027] Software Engineer Intern",
+          "location": "San Mateo, CA"
+        },
+        "evidence": {
+          "status": "not_found_in_checked_pages",
+          "company_website": "https://www.roblox.com/",
+          "job_title": "[Summer 2027] Software Engineer Intern",
+          "location": "San Mateo, CA",
+          "verified": false,
+          "matches": [],
+          "pages_checked": [
+            {
+              "requested_url": "https://www.roblox.com/",
+              "url": "https://www.roblox.com/",
+              "heading_match": null,
+              "location_match": false
+            }
+          ],
+          "errors": [],
+          "limitations": [
+            "Company website is an unverified candidate or supplied claim.",
+            "Checks at most four HTML pages, without JavaScript or login; absence is not fraud evidence."
+          ]
+        },
+        "effective_arguments": {
+          "company_website": "https://www.roblox.com/",
+          "job_title": "[Summer 2027] Software Engineer Intern",
+          "location": "San Mateo, CA"
+        }
+      }
+    ]
+  },
+  "not_checked": [
+    {
+      "claim": "company_identity",
+      "status": "not_checked",
+      "reason": "No independent company identity verification tool has run.",
+      "evidence_ids": []
+    },
+    {
+      "claim": "recruiter_affiliation",
+      "status": "not_checked",
+      "reason": "Recruiter affiliation verification is not implemented.",
+      "evidence_ids": []
+    }
+  ]
+}

@@ -1,0 +1,543 @@
+{
+  "assessment": {
+    "risk_level": "insufficient evidence",
+    "summary": "The job is posted on ZipRecruiter with no direct application URL. A candidate website (https://www.employer.com/) was selected via search but its association with the employer 'Employer.com' remains unverified. An association check did not find the specific 'Sales Recruiter' role on that domain, though absence is not fraud evidence. No independent company identity verification or recruiter affiliation checks were performed. The posting lacks contact details (email/phone) and salary data. While the description aligns with standard recruiting duties, these limitations prevent a definitive risk assessment."
+  },
+  "claim_checks": {
+    "company_identity": {
+      "status": "not_checked",
+      "reason": "No independent company identity verification tool has run.",
+      "evidence_ids": []
+    },
+    "company_website": {
+      "status": "unresolved",
+      "reason": "A supplied or selected candidate website is available, but its ownership/association with the claimed employer is unverified.",
+      "evidence_ids": [
+        "company-search-1"
+      ]
+    },
+    "job_on_company_careers_page": {
+      "status": "unresolved",
+      "reason": "The bounded check did not establish a match (not_found_in_checked_pages); absence or failed access is not a contradiction.",
+      "evidence_ids": [
+        "association-1"
+      ]
+    },
+    "recruiter_affiliation": {
+      "status": "not_checked",
+      "reason": "Recruiter affiliation verification is not implemented.",
+      "evidence_ids": []
+    },
+    "application_domain": {
+      "status": "not_checked",
+      "reason": "No successful application URL trace was recorded.",
+      "evidence_ids": []
+    }
+  },
+  "key_findings": {
+    "suspicious": [],
+    "supporting": []
+  },
+  "unresolved": [
+    {
+      "claim": "company_website",
+      "status": "unresolved",
+      "reason": "A supplied or selected candidate website is available, but its ownership/association with the claimed employer is unverified.",
+      "evidence_ids": [
+        "company-search-1"
+      ]
+    },
+    {
+      "claim": "job_on_company_careers_page",
+      "status": "unresolved",
+      "reason": "The bounded check did not establish a match (not_found_in_checked_pages); absence or failed access is not a contradiction.",
+      "evidence_ids": [
+        "association-1"
+      ]
+    }
+  ],
+  "evidence_sources": [
+    {
+      "id": "posting-1",
+      "type": "supplied_posting",
+      "url": null,
+      "evidence": {
+        "source_file": "Sales Recruiter (remote, contract) job in San Francisco, California, United States at ZipRecruiter _ Ziprecruiter.html",
+        "company": "Employer.com",
+        "job_title": "Sales Recruiter",
+        "location": "San Francisco, CA",
+        "company_website": null,
+        "application_url": null
+      }
+    },
+    {
+      "id": "company-search-1",
+      "type": "company_discovery",
+      "url": null,
+      "evidence": {
+        "company": "Employer.com",
+        "query": "\"Employer.com\" official company website",
+        "provider": "ddgs",
+        "company_website": "https://www.employer.com/",
+        "status": "candidate_selected",
+        "verified": false,
+        "candidates": [
+          {
+            "website": "https://www.employer.com/",
+            "source_url": "https://www.employer.com/blog/employer-com-acquires-dough",
+            "title": "Employer.com",
+            "description": "Founded by Stanford dropout Amogh Chaturvedi — who at just 19 has exited his first company — alongside co-founders Chirag Kawediya and Skyler Ji, Dough's software will now be embedded into Employer.com's expanding platform, where it will be further developed and launched to market. For the young team, this exit also helps propel their current company, Human Behavior—a new AI platform ...",
+            "name_match": true,
+            "name_match_reasons": [
+              "company_name_matches_title_segment"
+            ],
+            "evidence": [
+              {
+                "query": "\"Employer.com\" official company website",
+                "source_url": "https://www.employer.com/blog/employer-com-acquires-dough",
+                "title": "Employer.com",
+                "description": "Founded by Stanford dropout Amogh Chaturvedi — who at just 19 has exited his first company — alongside co-founders Chirag Kawediya and Skyler Ji, Dough's software will now be embedded into Employer.com's expanding platform, where it will be further developed and launched to market. For the young team, this exit also helps propel their current company, Human Behavior—a new AI platform ..."
+              },
+              {
+                "query": "\"Employer.com\" official company website",
+                "source_url": "https://www.employer.com/investors",
+                "title": "Employer.com | Investor Waitlist",
+                "description": "Employer.com integrates real-time bookkeeping, automated payroll, AI-powered tax credit optimization, and strategic talent recruiting. We are empowering businesses to scale globally without friction by building products that work well together and serve our customer's needs."
+              }
+            ]
+          },
+          {
+            "website": "https://www.sur.ly/",
+            "source_url": "https://www.sur.ly/i/employer.com/",
+            "title": "employer.com - Employer.com | Built for Your ... - Employer",
+            "description": "employer.com. One payroll platform, zero payroll headaches. Pay your team right on time, every time. Our scalable, stress-free solutions simplif...",
+            "name_match": true,
+            "name_match_reasons": [
+              "company_name_matches_title_segment"
+            ],
+            "evidence": [
+              {
+                "query": "\"Employer.com\" official company website",
+                "source_url": "https://www.sur.ly/i/employer.com/",
+                "title": "employer.com - Employer.com | Built for Your ... - Employer",
+                "description": "employer.com. One payroll platform, zero payroll headaches. Pay your team right on time, every time. Our scalable, stress-free solutions simplif..."
+              }
+            ]
+          },
+          {
+            "website": "https://www.wayup.com/",
+            "source_url": "https://www.wayup.com/i-j-Recruiter-III-Sales-Distribution-Salesforce-Partnership-Employer-com-063023562364778/",
+            "title": "Employer.com: Recruiter III — Sales & Distribution ... - WayUp",
+            "description": "You will build and maintain talent communities using both proven recruiting fundamentals and current market sourcing methods, identifying and engaging passive candidates while also managing the internal applicant pool efficiently. When you encounter a broken process, you fix it.",
+            "name_match": true,
+            "name_match_reasons": [
+              "company_name_matches_title_segment"
+            ],
+            "evidence": [
+              {
+                "query": "\"Employer.com\" San Francisco, CA Sales Recruiter",
+                "source_url": "https://www.wayup.com/i-j-Recruiter-III-Sales-Distribution-Salesforce-Partnership-Employer-com-063023562364778/",
+                "title": "Employer.com: Recruiter III — Sales & Distribution ... - WayUp",
+                "description": "You will build and maintain talent communities using both proven recruiting fundamentals and current market sourcing methods, identifying and engaging passive candidates while also managing the internal applicant pool efficiently. When you encounter a broken process, you fix it."
+              },
+              {
+                "query": "\"Employer.com\" San Francisco, CA Sales Recruiter",
+                "source_url": "https://www.wayup.com/i-j-Recruiter-III-Sales-Salesforce-Partnership-Employer-com-433048858913328/",
+                "title": "Employer.com: Recruiter III — Sales | Salesforce Partnership ...",
+                "description": "This is a six-month hybrid contract engagement based out of a Salesforce hub location in San Francisco, New York, Chicago, or Atlanta, with three days per week on-site."
+              }
+            ]
+          }
+        ],
+        "searches": [
+          {
+            "query": "\"Employer.com\" official company website",
+            "results": [
+              {
+                "url": "https://www.linkedin.com/company/employer-com",
+                "title": "Employer.com - LinkedIn",
+                "description": "Employer.com is a leading technology platform that powers businesses through comprehensive workforce and financial management solutions. We provide small and medium sized businesses with end-to ..."
+              },
+              {
+                "url": "https://www.linkedin.com/company/employerdotcom/",
+                "title": "Employer.com - LinkedIn",
+                "description": "About us Employer.com is the all-in-one platform designed to support every stage of the employee lifecycle, from initial recruitment to payroll, contingent workforce management, and compliance."
+              },
+              {
+                "url": "https://www.employer.com/blog/employer-com-acquires-dough",
+                "title": "Employer.com",
+                "description": "Founded by Stanford dropout Amogh Chaturvedi — who at just 19 has exited his first company — alongside co-founders Chirag Kawediya and Skyler Ji, Dough's software will now be embedded into Employer.com's expanding platform, where it will be further developed and launched to market. For the young team, this exit also helps propel their current company, Human Behavior—a new AI platform ..."
+              },
+              {
+                "url": "https://www.employer.com/investors",
+                "title": "Employer.com | Investor Waitlist",
+                "description": "Employer.com integrates real-time bookkeeping, automated payroll, AI-powered tax credit optimization, and strategic talent recruiting. We are empowering businesses to scale globally without friction by building products that work well together and serve our customer's needs."
+              },
+              {
+                "url": "https://www.sur.ly/i/employer.com/",
+                "title": "employer.com - Employer.com | Built for Your ... - Employer",
+                "description": "employer.com. One payroll platform, zero payroll headaches. Pay your team right on time, every time. Our scalable, stress-free solutions simplif..."
+              }
+            ]
+          },
+          {
+            "query": "\"Employer.com\" San Francisco, CA Sales Recruiter",
+            "results": [
+              {
+                "url": "https://www.linkedin.com/jobs/view/recruiter-iii-—-sales-salesforce-partnership-at-employer-com-4473658892",
+                "title": "Employer.com hiring Recruiter III — Sales | Salesforce ...",
+                "description": "Oct 5, 2026 · Employer.com, part of the Recruiter.com family of brands, has partnered with Salesforce to place contract recruiting talent supporting their North American Sales and Go-To-Market..."
+              },
+              {
+                "url": "https://www.linkedin.com/jobs/view/recruiter-iii-—-sales-distribution-salesforce-partnership-at-employer-com-4440183971",
+                "title": "Employer.com hiring Recruiter III — Sales & Distribution ...",
+                "description": "Employer.com, part of the Recruiter.com family of brands, has partnered with Salesforce to place contract recruiting talent supporting their North American Sales and Distribution..."
+              },
+              {
+                "url": "https://www.wayup.com/i-j-Recruiter-III-Sales-Distribution-Salesforce-Partnership-Employer-com-063023562364778/",
+                "title": "Employer.com: Recruiter III — Sales & Distribution ... - WayUp",
+                "description": "You will build and maintain talent communities using both proven recruiting fundamentals and current market sourcing methods, identifying and engaging passive candidates while also managing the internal applicant pool efficiently. When you encounter a broken process, you fix it."
+              },
+              {
+                "url": "https://www.wayup.com/i-j-Recruiter-III-Sales-Salesforce-Partnership-Employer-com-433048858913328/",
+                "title": "Employer.com: Recruiter III — Sales | Salesforce Partnership ...",
+                "description": "This is a six-month hybrid contract engagement based out of a Salesforce hub location in San Francisco, New York, Chicago, or Atlanta, with three days per week on-site."
+              },
+              {
+                "url": "https://www.ziprecruiter.com/co/employer-com/Jobs/-in-San-Francisco,CA?lk=-qV6IiuUNr-Pl5FIfJuxYQ",
+                "title": "60 Employer.Com Jobs Hiring in San Francisco, CA",
+                "description": "Looking for Employer.Com jobs in San Francisco, California? 1-Click Apply to 60 Employer.Com job openings hiring near you on ZipRecruiter!"
+              }
+            ]
+          }
+        ],
+        "errors": [],
+        "selection": {
+          "selected_url": "https://www.employer.com/",
+          "match_strength": "tentative",
+          "reason": "The candidate URL 'https://www.employer.com/' is the only one that matches the company name 'Employer.com' in a manner consistent with an official corporate domain (using the full brand name as the root). The other candidates ('sur.ly' and 'wayup.com') are third-party job board redirects or listings that merely mention the company name in their metadata, not the actual corporate website. While the posting mentions San Francisco, CA, and the search snippet for 'employer.com' describes a platform integrating payroll and recruiting (consistent with the posting's description of serving clients with talent acquisition services), there is no direct evidence linking the specific job role or location to this URL. However, given that 'sur.ly' and 'wayup.com' are clearly intermediaries, 'employer.com' remains the only plausible candidate for the official site.",
+          "remaining_uncertainty": "The search snippets do not explicitly confirm that 'https://www.employer.com/' is the current active domain for hiring or that it hosts the specific job posting mentioned. The company description mentions a family of brands (Flawless Recruit, Recruiter.com), which could imply multiple domains, but no evidence suggests these other names are the primary corporate site. Without a direct link from the search results to a careers page on 'employer.com', the selection is based solely on domain naming conventions and the exclusion of known job board redirects."
+        }
+      }
+    },
+    {
+      "id": "association-1",
+      "type": "employer_association",
+      "url": "https://www.employer.com/",
+      "evidence": {
+        "status": "not_found_in_checked_pages",
+        "company_website": "https://www.employer.com/",
+        "job_title": "Sales Recruiter",
+        "location": "San Francisco, CA",
+        "verified": false,
+        "matches": [],
+        "pages_checked": [
+          {
+            "requested_url": "https://www.employer.com/",
+            "url": "https://www.employer.com/",
+            "heading_match": null,
+            "location_match": true
+          },
+          {
+            "requested_url": "https://bountyjobs.com/",
+            "url": "https://bountyjobs.com/",
+            "heading_match": null,
+            "location_match": false
+          },
+          {
+            "requested_url": "https://www.bountyjobs.com?hsLang=en",
+            "url": "https://bountyjobs.com/",
+            "heading_match": null,
+            "location_match": false
+          },
+          {
+            "requested_url": "https://bountyjobs.com/for-employers?hsLang=en",
+            "url": "https://bountyjobs.com/for-employers",
+            "heading_match": null,
+            "location_match": false
+          }
+        ],
+        "errors": [],
+        "limitations": [
+          "Company website is an unverified candidate or supplied claim.",
+          "Checks at most four HTML pages, without JavaScript or login; absence is not fraud evidence."
+        ]
+      }
+    }
+  ],
+  "recommended_action": "Confirm the posting and application destination through an independently established employer channel before sharing sensitive information. This assessment does not verify legitimacy.",
+  "investigation": {
+    "model": "qwen3.5:9b",
+    "content_analysis": {
+      "status": "completed",
+      "source_field": "description",
+      "observations": [],
+      "claims_to_verify": [],
+      "limitations": [
+        "The source text describes standard recruiting duties (sourcing, screening, interviewing) and typical qualifications for a Sales Recruiter role.",
+        "No explicit requests for applicant payments, bank details, passwords, or equipment deposits were found in the provided text.",
+        "The absence of specific fraud indicators in this excerpt does not confirm legitimacy; external verification of the employer 'Employer.com' and the specific job posting URL is required."
+      ],
+      "errors": []
+    },
+    "company_lookup": {
+      "company": "Employer.com",
+      "query": "\"Employer.com\" official company website",
+      "provider": "ddgs",
+      "company_website": "https://www.employer.com/",
+      "status": "candidate_selected",
+      "verified": false,
+      "candidates": [
+        {
+          "website": "https://www.employer.com/",
+          "source_url": "https://www.employer.com/blog/employer-com-acquires-dough",
+          "title": "Employer.com",
+          "description": "Founded by Stanford dropout Amogh Chaturvedi — who at just 19 has exited his first company — alongside co-founders Chirag Kawediya and Skyler Ji, Dough's software will now be embedded into Employer.com's expanding platform, where it will be further developed and launched to market. For the young team, this exit also helps propel their current company, Human Behavior—a new AI platform ...",
+          "name_match": true,
+          "name_match_reasons": [
+            "company_name_matches_title_segment"
+          ],
+          "evidence": [
+            {
+              "query": "\"Employer.com\" official company website",
+              "source_url": "https://www.employer.com/blog/employer-com-acquires-dough",
+              "title": "Employer.com",
+              "description": "Founded by Stanford dropout Amogh Chaturvedi — who at just 19 has exited his first company — alongside co-founders Chirag Kawediya and Skyler Ji, Dough's software will now be embedded into Employer.com's expanding platform, where it will be further developed and launched to market. For the young team, this exit also helps propel their current company, Human Behavior—a new AI platform ..."
+            },
+            {
+              "query": "\"Employer.com\" official company website",
+              "source_url": "https://www.employer.com/investors",
+              "title": "Employer.com | Investor Waitlist",
+              "description": "Employer.com integrates real-time bookkeeping, automated payroll, AI-powered tax credit optimization, and strategic talent recruiting. We are empowering businesses to scale globally without friction by building products that work well together and serve our customer's needs."
+            }
+          ]
+        },
+        {
+          "website": "https://www.sur.ly/",
+          "source_url": "https://www.sur.ly/i/employer.com/",
+          "title": "employer.com - Employer.com | Built for Your ... - Employer",
+          "description": "employer.com. One payroll platform, zero payroll headaches. Pay your team right on time, every time. Our scalable, stress-free solutions simplif...",
+          "name_match": true,
+          "name_match_reasons": [
+            "company_name_matches_title_segment"
+          ],
+          "evidence": [
+            {
+              "query": "\"Employer.com\" official company website",
+              "source_url": "https://www.sur.ly/i/employer.com/",
+              "title": "employer.com - Employer.com | Built for Your ... - Employer",
+              "description": "employer.com. One payroll platform, zero payroll headaches. Pay your team right on time, every time. Our scalable, stress-free solutions simplif..."
+            }
+          ]
+        },
+        {
+          "website": "https://www.wayup.com/",
+          "source_url": "https://www.wayup.com/i-j-Recruiter-III-Sales-Distribution-Salesforce-Partnership-Employer-com-063023562364778/",
+          "title": "Employer.com: Recruiter III — Sales & Distribution ... - WayUp",
+          "description": "You will build and maintain talent communities using both proven recruiting fundamentals and current market sourcing methods, identifying and engaging passive candidates while also managing the internal applicant pool efficiently. When you encounter a broken process, you fix it.",
+          "name_match": true,
+          "name_match_reasons": [
+            "company_name_matches_title_segment"
+          ],
+          "evidence": [
+            {
+              "query": "\"Employer.com\" San Francisco, CA Sales Recruiter",
+              "source_url": "https://www.wayup.com/i-j-Recruiter-III-Sales-Distribution-Salesforce-Partnership-Employer-com-063023562364778/",
+              "title": "Employer.com: Recruiter III — Sales & Distribution ... - WayUp",
+              "description": "You will build and maintain talent communities using both proven recruiting fundamentals and current market sourcing methods, identifying and engaging passive candidates while also managing the internal applicant pool efficiently. When you encounter a broken process, you fix it."
+            },
+            {
+              "query": "\"Employer.com\" San Francisco, CA Sales Recruiter",
+              "source_url": "https://www.wayup.com/i-j-Recruiter-III-Sales-Salesforce-Partnership-Employer-com-433048858913328/",
+              "title": "Employer.com: Recruiter III — Sales | Salesforce Partnership ...",
+              "description": "This is a six-month hybrid contract engagement based out of a Salesforce hub location in San Francisco, New York, Chicago, or Atlanta, with three days per week on-site."
+            }
+          ]
+        }
+      ],
+      "searches": [
+        {
+          "query": "\"Employer.com\" official company website",
+          "results": [
+            {
+              "url": "https://www.linkedin.com/company/employer-com",
+              "title": "Employer.com - LinkedIn",
+              "description": "Employer.com is a leading technology platform that powers businesses through comprehensive workforce and financial management solutions. We provide small and medium sized businesses with end-to ..."
+            },
+            {
+              "url": "https://www.linkedin.com/company/employerdotcom/",
+              "title": "Employer.com - LinkedIn",
+              "description": "About us Employer.com is the all-in-one platform designed to support every stage of the employee lifecycle, from initial recruitment to payroll, contingent workforce management, and compliance."
+            },
+            {
+              "url": "https://www.employer.com/blog/employer-com-acquires-dough",
+              "title": "Employer.com",
+              "description": "Founded by Stanford dropout Amogh Chaturvedi — who at just 19 has exited his first company — alongside co-founders Chirag Kawediya and Skyler Ji, Dough's software will now be embedded into Employer.com's expanding platform, where it will be further developed and launched to market. For the young team, this exit also helps propel their current company, Human Behavior—a new AI platform ..."
+            },
+            {
+              "url": "https://www.employer.com/investors",
+              "title": "Employer.com | Investor Waitlist",
+              "description": "Employer.com integrates real-time bookkeeping, automated payroll, AI-powered tax credit optimization, and strategic talent recruiting. We are empowering businesses to scale globally without friction by building products that work well together and serve our customer's needs."
+            },
+            {
+              "url": "https://www.sur.ly/i/employer.com/",
+              "title": "employer.com - Employer.com | Built for Your ... - Employer",
+              "description": "employer.com. One payroll platform, zero payroll headaches. Pay your team right on time, every time. Our scalable, stress-free solutions simplif..."
+            }
+          ]
+        },
+        {
+          "query": "\"Employer.com\" San Francisco, CA Sales Recruiter",
+          "results": [
+            {
+              "url": "https://www.linkedin.com/jobs/view/recruiter-iii-—-sales-salesforce-partnership-at-employer-com-4473658892",
+              "title": "Employer.com hiring Recruiter III — Sales | Salesforce ...",
+              "description": "Oct 5, 2026 · Employer.com, part of the Recruiter.com family of brands, has partnered with Salesforce to place contract recruiting talent supporting their North American Sales and Go-To-Market..."
+            },
+            {
+              "url": "https://www.linkedin.com/jobs/view/recruiter-iii-—-sales-distribution-salesforce-partnership-at-employer-com-4440183971",
+              "title": "Employer.com hiring Recruiter III — Sales & Distribution ...",
+              "description": "Employer.com, part of the Recruiter.com family of brands, has partnered with Salesforce to place contract recruiting talent supporting their North American Sales and Distribution..."
+            },
+            {
+              "url": "https://www.wayup.com/i-j-Recruiter-III-Sales-Distribution-Salesforce-Partnership-Employer-com-063023562364778/",
+              "title": "Employer.com: Recruiter III — Sales & Distribution ... - WayUp",
+              "description": "You will build and maintain talent communities using both proven recruiting fundamentals and current market sourcing methods, identifying and engaging passive candidates while also managing the internal applicant pool efficiently. When you encounter a broken process, you fix it."
+            },
+            {
+              "url": "https://www.wayup.com/i-j-Recruiter-III-Sales-Salesforce-Partnership-Employer-com-433048858913328/",
+              "title": "Employer.com: Recruiter III — Sales | Salesforce Partnership ...",
+              "description": "This is a six-month hybrid contract engagement based out of a Salesforce hub location in San Francisco, New York, Chicago, or Atlanta, with three days per week on-site."
+            },
+            {
+              "url": "https://www.ziprecruiter.com/co/employer-com/Jobs/-in-San-Francisco,CA?lk=-qV6IiuUNr-Pl5FIfJuxYQ",
+              "title": "60 Employer.Com Jobs Hiring in San Francisco, CA",
+              "description": "Looking for Employer.Com jobs in San Francisco, California? 1-Click Apply to 60 Employer.Com job openings hiring near you on ZipRecruiter!"
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "selection": {
+        "selected_url": "https://www.employer.com/",
+        "match_strength": "tentative",
+        "reason": "The candidate URL 'https://www.employer.com/' is the only one that matches the company name 'Employer.com' in a manner consistent with an official corporate domain (using the full brand name as the root). The other candidates ('sur.ly' and 'wayup.com') are third-party job board redirects or listings that merely mention the company name in their metadata, not the actual corporate website. While the posting mentions San Francisco, CA, and the search snippet for 'employer.com' describes a platform integrating payroll and recruiting (consistent with the posting's description of serving clients with talent acquisition services), there is no direct evidence linking the specific job role or location to this URL. However, given that 'sur.ly' and 'wayup.com' are clearly intermediaries, 'employer.com' remains the only plausible candidate for the official site.",
+        "remaining_uncertainty": "The search snippets do not explicitly confirm that 'https://www.employer.com/' is the current active domain for hiring or that it hosts the specific job posting mentioned. The company description mentions a family of brands (Flawless Recruit, Recruiter.com), which could imply multiple domains, but no evidence suggests these other names are the primary corporate site. Without a direct link from the search results to a careers page on 'employer.com', the selection is based solely on domain naming conventions and the exclusion of known job board redirects."
+      }
+    },
+    "employer_association": {
+      "status": "not_found_in_checked_pages",
+      "company_website": "https://www.employer.com/",
+      "job_title": "Sales Recruiter",
+      "location": "San Francisco, CA",
+      "verified": false,
+      "matches": [],
+      "pages_checked": [
+        {
+          "requested_url": "https://www.employer.com/",
+          "url": "https://www.employer.com/",
+          "heading_match": null,
+          "location_match": true
+        },
+        {
+          "requested_url": "https://bountyjobs.com/",
+          "url": "https://bountyjobs.com/",
+          "heading_match": null,
+          "location_match": false
+        },
+        {
+          "requested_url": "https://www.bountyjobs.com?hsLang=en",
+          "url": "https://bountyjobs.com/",
+          "heading_match": null,
+          "location_match": false
+        },
+        {
+          "requested_url": "https://bountyjobs.com/for-employers?hsLang=en",
+          "url": "https://bountyjobs.com/for-employers",
+          "heading_match": null,
+          "location_match": false
+        }
+      ],
+      "errors": [],
+      "limitations": [
+        "Company website is an unverified candidate or supplied claim.",
+        "Checks at most four HTML pages, without JavaScript or login; absence is not fraud evidence."
+      ]
+    },
+    "company_website_used": "https://www.employer.com/",
+    "tool_calls": [
+      {
+        "tool": "check_employer_association",
+        "arguments": {
+          "company_website": "https://www.employer.com/",
+          "job_title": "Sales Recruiter",
+          "location": "San Francisco, CA"
+        },
+        "evidence": {
+          "status": "not_found_in_checked_pages",
+          "company_website": "https://www.employer.com/",
+          "job_title": "Sales Recruiter",
+          "location": "San Francisco, CA",
+          "verified": false,
+          "matches": [],
+          "pages_checked": [
+            {
+              "requested_url": "https://www.employer.com/",
+              "url": "https://www.employer.com/",
+              "heading_match": null,
+              "location_match": true
+            },
+            {
+              "requested_url": "https://bountyjobs.com/",
+              "url": "https://bountyjobs.com/",
+              "heading_match": null,
+              "location_match": false
+            },
+            {
+              "requested_url": "https://www.bountyjobs.com?hsLang=en",
+              "url": "https://bountyjobs.com/",
+              "heading_match": null,
+              "location_match": false
+            },
+            {
+              "requested_url": "https://bountyjobs.com/for-employers?hsLang=en",
+              "url": "https://bountyjobs.com/for-employers",
+              "heading_match": null,
+              "location_match": false
+            }
+          ],
+          "errors": [],
+          "limitations": [
+            "Company website is an unverified candidate or supplied claim.",
+            "Checks at most four HTML pages, without JavaScript or login; absence is not fraud evidence."
+          ]
+        },
+        "effective_arguments": {
+          "company_website": "https://www.employer.com/",
+          "job_title": "Sales Recruiter",
+          "location": "San Francisco, CA"
+        }
+      }
+    ]
+  },
+  "not_checked": [
+    {
+      "claim": "company_identity",
+      "status": "not_checked",
+      "reason": "No independent company identity verification tool has run.",
+      "evidence_ids": []
+    },
+    {
+      "claim": "recruiter_affiliation",
+      "status": "not_checked",
+      "reason": "Recruiter affiliation verification is not implemented.",
+      "evidence_ids": []
+    },
+    {
+      "claim": "application_domain",
+      "status": "not_checked",
+      "reason": "No successful application URL trace was recorded.",
+      "evidence_ids": []
+    }
+  ]
+}

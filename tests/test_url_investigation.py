@@ -90,6 +90,25 @@ class URLTests(unittest.TestCase):
 
 
 class AgentTests(unittest.TestCase):
+    def test_final_assessment_retries_truncation(self):
+        from unittest.mock import Mock
+        client = Mock()
+        client.chat.side_effect = [
+            SimpleNamespace(done_reason="length", message=SimpleNamespace(content='{')),
+            SimpleNamespace(done_reason="stop", message=SimpleNamespace(content=json.dumps({"risk_level": "insufficient evidence", "explanation": "Not verified"}))),
+        ]
+        result = assess_job({}, client=client)
+        self.assertEqual(result["risk_level"], "insufficient evidence")
+        self.assertEqual(client.chat.call_count, 2)
+
+    def test_repeated_truncation_stops_after_one_retry(self):
+        from unittest.mock import Mock
+        client = Mock()
+        client.chat.return_value = SimpleNamespace(done_reason="length", message=SimpleNamespace(content='{'))
+        with self.assertRaisesRegex(ValueError, "retry"):
+            assess_job({}, client=client)
+        self.assertEqual(client.chat.call_count, 2)
+
     def run_agent(self, arguments):
         from unittest.mock import Mock
         call = SimpleNamespace(function=SimpleNamespace(name="inspect_application_url", arguments=arguments))
@@ -107,12 +126,12 @@ class AgentTests(unittest.TestCase):
         investigator.assert_called_once_with("https://example.com", None)
         messages = client.chat.call_args.kwargs["messages"]
         self.assertTrue(any(isinstance(m, dict) and m.get("role") == "tool" for m in messages))
-        self.assertFalse(result["tool_calls"][0]["evidence"]["lookup_success"])
+        self.assertFalse(result["investigation"]["tool_calls"][0]["evidence"]["lookup_success"])
 
     def test_invented_url_rejected(self):
         result, _, investigator = self.run_agent({"application_url": "https://other.com"})
         investigator.assert_not_called()
-        self.assertIn("error", result["tool_calls"][0]["evidence"])
+        self.assertIn("error", result["investigation"]["tool_calls"][0]["evidence"])
 
     def test_empty_missing_company_allowed(self):
         _, _, investigator = self.run_agent({"application_url": "https://example.com", "company_website": ""})
@@ -122,7 +141,7 @@ class AgentTests(unittest.TestCase):
         result, client, investigator = self.run_agent({
             "application_url": "https://example.com", "company_website": "https://unselected.com/"})
         investigator.assert_called_once_with("https://example.com", None)
-        entry = result["tool_calls"][0]
+        entry = result["investigation"]["tool_calls"][0]
         self.assertEqual(entry["arguments"]["company_website"], "https://unselected.com/")
         self.assertIsNone(entry["effective_arguments"]["company_website"])
 
