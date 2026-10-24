@@ -12,6 +12,7 @@ import inspect_application_url as url_tool
 from assess_job import assess_job
 from follow_redirects import follow_redirects
 from get_domain_info import get_domain_info
+import get_domain_info as domain_tool
 
 
 class URLTests(unittest.TestCase):
@@ -34,42 +35,54 @@ class URLTests(unittest.TestCase):
             requested.append(str(request.url))
             return httpx.Response(200, json={"events": []})
         client = httpx.Client(transport=httpx.MockTransport(handler))
-        with patch.object(url_tool.httpx, "Client", return_value=client), patch.object(url_tool, "validate_public_url"):
-            result = get_domain_info("https://jobs.example.co.uk/apply")
-        self.assertEqual(result["domain"], "example.co.uk")
+        with patch.object(domain_tool.httpx, "Client", return_value=client), patch.object(domain_tool, "validate_public_url"):
+            result = get_domain_info("https://jobs.example.com/apply")
+        self.assertEqual(result["domain"], "example.com")
         self.assertTrue(result["lookup_success"])
-        self.assertEqual(requested, ["https://rdap.org/domain/example.co.uk"])
+        self.assertEqual(requested, ["https://rdap.org/domain/example.com"])
 
-    def investigate(self, handler, url="https://jobs.example.co.uk/apply", company="https://example.co.uk"):
+    def investigate(self, handler, url="https://jobs.example.com/apply", company="https://example.com"):
         client = httpx.Client(transport=httpx.MockTransport(handler))
         with patch.object(url_tool.httpx, "Client", return_value=client), patch.object(url_tool, "validate_public_url"):
             return url_tool.inspect_application_url(url, company)
 
-    def test_redirect_and_registration(self):
+    def test_application_trace_never_requests_registration(self):
+        requested = []
         def handler(request):
-            if request.url.host == "rdap.org":
-                return httpx.Response(200, json={"events": [{"eventAction": "registration", "eventDate": "2020-01-01T00:00:00Z"}], "status": ["active"]})
+            requested.append(str(request.url))
             if request.url.path == "/apply":
                 return httpx.Response(302, headers={"Location": "/form"})
             return httpx.Response(200)
         result = self.investigate(handler)
-        self.assertEqual(result["final_url"], "https://jobs.example.co.uk/form")
+        self.assertEqual(result["final_url"], "https://jobs.example.com/form")
         self.assertTrue(result["domain_matches_company"])
+        self.assertEqual(len(result["redirects"]), 1)
+        self.assertEqual(requested, ["https://jobs.example.com/apply", "https://jobs.example.com/form"])
+        for key in ("domain_created", "domain_age_days", "registrar", "rdap_source_url", "lookup_success"):
+            self.assertNotIn(key, result)
+
+    def test_company_registration_remains_separate(self):
+        requested = []
+        def handler(request):
+            requested.append(str(request.url))
+            return httpx.Response(200, json={"events": [{"eventAction": "registration", "eventDate": "2020-01-01T00:00:00Z"}]})
+        client = httpx.Client(transport=httpx.MockTransport(handler))
+        with patch.object(domain_tool.httpx, "Client", return_value=client), patch.object(domain_tool, "validate_public_url"):
+            result = get_domain_info("https://www.example.com/careers")
+        self.assertEqual(result["domain"], "example.com")
         self.assertTrue(result["lookup_success"])
         self.assertGreater(result["domain_age_days"], 2000)
-        self.assertEqual(len(result["redirects"]), 1)
+        self.assertEqual(requested, ["https://rdap.org/domain/example.com"])
 
-    def test_missing_date_and_company(self):
-        result = self.investigate(lambda r: httpx.Response(200, json={}), company=None)
-        self.assertIsNone(result["domain_age_days"])
+    def test_missing_company_comparison(self):
+        result = self.investigate(lambda r: httpx.Response(200), company=None)
         self.assertIsNone(result["domain_matches_company"])
-        self.assertTrue(result["lookup_success"])
+        self.assertTrue(result["redirect_lookup_success"])
 
-    def test_blocked_page_and_failed_rdap(self):
+    def test_blocked_page_does_not_trigger_rdap(self):
         result = self.investigate(lambda r: httpx.Response(403))
         self.assertEqual(result["http_status"], 403)
-        self.assertFalse(result["lookup_success"])
-        self.assertEqual({e["stage"] for e in result["errors"]}, {"http", "rdap"})
+        self.assertEqual({e["stage"] for e in result["errors"]}, {"http"})
 
     def test_redirect_loop(self):
         result = self.investigate(lambda r: httpx.Response(302, headers={"Location": str(r.url)}))

@@ -114,6 +114,7 @@ class CompanyTests(unittest.TestCase):
         client.chat.side_effect = [
             SimpleNamespace(done_reason="stop", message=SimpleNamespace(content=json.dumps(selection))),
             SimpleNamespace(message=SimpleNamespace(tool_calls=[call])),
+            SimpleNamespace(message=SimpleNamespace(tool_calls=[])),
             SimpleNamespace(done_reason="stop", message=SimpleNamespace(content=json.dumps({"risk_level": "insufficient evidence", "explanation": "Unverified"}))),
         ]
         investigator = Mock(return_value={"domain_matches_company": True})
@@ -179,6 +180,7 @@ class CompanyTests(unittest.TestCase):
         call = SimpleNamespace(function=SimpleNamespace(name="inspect_application_url", arguments={"application_url": posting["application_url"], "company_website": "https://acme.com/"}))
         client = Mock()
         client.chat.side_effect = [SimpleNamespace(message=SimpleNamespace(tool_calls=[call])),
+                                  SimpleNamespace(message=SimpleNamespace(tool_calls=[])),
                                   SimpleNamespace(done_reason="stop", message=SimpleNamespace(content=json.dumps({"risk_level": "insufficient evidence", "explanation": "Unverified candidate"})))]
         result = assess_job(posting, client=client, investigator=investigator, company_finder=finder, include_trace=True)
         investigator.assert_called_once_with(posting["application_url"], "https://acme.com/")

@@ -69,7 +69,8 @@ Content analysis focuses on the extracted description when present and validates
 quotes against the original text, allowing layout whitespace differences. Two
 narrow rules mark explicit gift-card payment and bank-password requests as
 concerns while retaining the model's original label; negations and warnings
-disable these rules. Interpretations still require review.
+disable these rules. Clear anti-fee/credential warnings are retained as context,
+with any corrected model label and interpretation preserved for review.
 
 Assessment also checks up to four HTML pages from the candidate company website
 and its careers links for a matching job heading and location. Results distinguish
@@ -78,10 +79,14 @@ This supports association with a candidate site, not employer identity verificat
 Pages requiring JavaScript may not be checkable, and location spelling differences
 can prevent a match. Qwen selects this tool when association evidence is useful
 and a company website and job title are available. Skipped checks are saved as
-`not_requested`. Qwen can choose URL inspection and association across two
+`not_requested`. Qwen can choose URL inspection, company-domain investigation, association and email comparison across two
 selection rounds, with each tool executing at most once. Tool requests and
 returned evidence are saved in `tool_calls`. Careers links in page navigation
 and footers are preserved, and links matching the job title take priority.
+Known tracking variants are grouped, and resolved pages are checked once.
+If a homepage exposes no careers links, common `/careers` and `/jobs` paths may
+be probed, with that limitation recorded. The bound is four distinct HTML pages
+and at most eight candidate fetch attempts, including failed/duplicate targets.
 
 ```powershell
 python scripts/check_employer_association.py "https://company.example/careers" "Software Engineer" --location "San Francisco, CA"
@@ -89,6 +94,11 @@ python scripts/check_employer_association.py "https://company.example/careers" "
 
 The final assessment uses an explicit output budget and retries once if truncated,
 reusing the gathered evidence. Longer PDFs may use more local memory and time.
+Summaries also receive explicitly scoped tool facts. Narrow mechanical checks
+detect unobserved redirects, unsupported official-site wording, selected HTTP-status misattributions and overly certain fraud wording. Detected errors get one wording-correction
+attempt, then a factual fallback if necessary. The model's risk label is kept;
+`investigation.summary_review` records the original wording and outcome. This
+does not verify every sentence or establish the accuracy of the risk label.
 
 To test this step independently on an extracted job JSON:
 
@@ -103,13 +113,17 @@ python scripts/follow_redirects.py "https://example.com"
 python scripts/get_domain_info.py example.com
 ```
 
-Redirect tracing does not call RDAP. Domain lookup accepts a domain or URL and
-looks up its registrable domain without visiting the application page. The
-combined inspection tool traces the destination first, then looks up that domain.
+Application URL inspection and redirect tracing do not call RDAP or return
+registration dates, domain age or registrar information. Company website domain
+investigation is separate: run `get_domain_info.py` with the candidate company
+website to retrieve its registration date, age and registrar. Qwen can also
+request the separate `get_company_domain_info` tool when a company website was
+supplied or selected. Its registration evidence is retained separately from
+application inspection and made available to the final assessment. Registration
+age alone does not verify a company or establish fraud.
 
 The first external-evidence tool follows HTTP redirects, records the destination
-and HTTPS use, retrieves RDAP registration information, and compares registrable
-domains with the employer website supplied in the posting. It returns evidence,
+and HTTPS use, and compares registrable domains with the employer website supplied in the posting. It returns evidence,
 not a fraud verdict.
 
 Run the tool independently, without Qwen:
@@ -147,8 +161,8 @@ Qwen is told which tools actually executed and to disclose relevant unperformed
 checks. A posting without an application URL can still receive company search
 and employer-association evidence; URL inspection is unavailable in that case.
 
-For a professor demo, show the input posting, the tool request, the redirect and
-registration evidence, and the final explanation. The Indeed example lacks a
+For a professor demo, show the input posting, the tool request, the redirect
+evidence, and the final explanation. The Indeed example lacks a
 company website, so the new lookup first searches for a likely site for Hiresort.
 If no unique candidate is selected, domain comparison remains `null`.
 
@@ -212,11 +226,12 @@ Important limits:
 
 - Only HTTP redirects are followed; JavaScript navigation, login flows, and form
   submissions are not executed. An old application link may return an HTTP error.
-- Domain comparison uses the bundled Public Suffix List, so `jobs.example.co.uk`
-  matches `example.co.uk`. The supplied company website is not independently verified.
+- Domain comparison uses the bundled Public Suffix List, so `jobs.example.com`
+  matches `example.com`. The supplied company website is not independently verified.
 - RDAP may fail or omit the registration date. Missing values remain `null`, and
-  failures appear in `errors`. `lookup_success` refers to RDAP, while
-  `redirect_lookup_success` refers to completing the HTTP redirect trace.
+  failures appear in `errors` of the separate company-domain lookup. Its
+  `lookup_success` refers to RDAP; application inspection uses only
+  `redirect_lookup_success` for the HTTP redirect trace.
 - Domain mismatch, recent registration, and HTTPS each require context. Legitimate
   employers use third-party hiring platforms; HTTPS does not establish legitimacy.
 - URLs must use HTTP/HTTPS and resolve to public addresses, checked at each hop.
@@ -233,3 +248,39 @@ Run the offline checks:
 ```powershell
 python -m unittest discover -s tests -v
 ```
+
+## Recruiter email/domain comparison
+
+The assessment can now let Qwen request an email-domain comparison when the
+posting contains email addresses. The check handles company subdomains and
+identifies a limited set of free email providers,
+and retains source snippets for each address. It uses no paid API, model calls,
+network requests or outgoing email itself.
+
+Run the check independently on extracted posting JSON:
+
+```powershell
+python scripts/check_recruiter_email.py "data/output/your-posting.json"
+```
+
+Optionally supply a candidate company website:
+
+```powershell
+python scripts/check_recruiter_email.py "data/output/your-posting.json" --company-website "https://example.com"
+```
+
+Full assessments use the existing `scripts/assess_job.py` command. Email checks
+are optional, may run once, and share the existing two tool-selection rounds
+with URL inspection, company-domain investigation and employer association. Reports retain the comparisons
+as evidence; recruiter affiliation remains unresolved after comparison.
+A matching domain does not establish recruiter identity or mailbox ownership.
+Different domains can belong to staffing agencies, and a free email provider
+alone does not establish fraud. Addresses may also be administrative contacts.
+
+Company-domain checks accept only the selected company website, may execute once,
+and share the existing two selection rounds. Rejected or unresolved company
+candidates cannot be investigated through this tool. Registration lookup failures
+remain limitations. Careers evidence records per-URL HTTP status so errors on
+`/careers`, `/jobs` or an application endpoint are distinguished from a successfully
+read company page. Summary checks cover specific contradictions; they do not
+validate every sentence or the model's risk decision.

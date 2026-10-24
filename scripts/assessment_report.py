@@ -18,7 +18,7 @@ def build_report(job, assessment, investigation):
         "company_identity": claim("not_checked", "No independent company identity verification tool has run."),
         "company_website": claim("not_checked", "No company website was supplied or selected."),
         "job_on_company_careers_page": claim("not_checked", "Employer association was not executed."),
-        "recruiter_affiliation": claim("not_checked", "Recruiter affiliation verification is not implemented."),
+        "recruiter_affiliation": claim("not_checked", "No recruiter email-domain check or independent affiliation verification ran."),
         "application_domain": claim("not_checked", "No successful application URL trace was recorded."),
     }
     lookup = investigation.get("company_lookup")
@@ -43,6 +43,22 @@ def build_report(job, assessment, investigation):
         else:
             checks["job_on_company_careers_page"] = claim("unresolved", "The bounded check did not establish a match (" + str(association.get("status")) + "); absence or failed access is not a contradiction.", ["association-1"])
     for index, call in enumerate(investigation.get("tool_calls", []), 1):
+        if call.get("tool") == "get_company_domain_info":
+            result = call.get("evidence", {})
+            identifier = evidence(f"company-domain-{index}", "company_domain_registration", result, result.get("rdap_source_url"))
+            if not result.get("error"):
+                checks["company_website"]["evidence_ids"].append(identifier)
+                checks["company_website"]["reason"] += " A separate candidate company-domain registration lookup " + ("returned registry evidence; domain age does not verify employer identity." if result.get("lookup_success") else "did not establish registration details; lookup failure is not fraud evidence.")
+            continue
+        if call.get("tool") == "check_recruiter_email":
+            result = call.get("evidence", {})
+            identifier = evidence(f"email-{index}", "recruiter_email_comparison", result)
+            if result.get("status") == "checked" and result.get("emails"):
+                reason = ("Posting email domains were inspected, but no valid candidate company domain was available for comparison. Recruiter affiliation remains unverified."
+                          if not result.get("company_domain") else
+                          "Posting email domains were inspected against an unverified candidate website where possible. Neither matching, different nor free-provider domains establish recruiter affiliation or fraud; consult the email evidence and contact context.")
+                checks["recruiter_affiliation"] = claim("unresolved", reason, [identifier])
+            continue
         if call.get("tool") != "inspect_application_url":
             continue
         result = call.get("evidence", {})

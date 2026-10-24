@@ -11,6 +11,20 @@ from assess_job import assess_job
 
 
 class ContentTests(unittest.TestCase):
+    def test_model_false_positive_on_warning_is_corrected(self):
+        client = self.client({"observations": [{"category": "sensitive_data", "quote": "send your bank password",
+            "interpretation": "Password request", "assessment": "concern"}], "claims_to_verify": [], "limitations": []})
+        result = analyze_content({"description": "Never send your bank password to a recruiter."}, client=client)
+        item = result["observations"][0]
+        self.assertEqual(item["assessment"], "context")
+        self.assertEqual(item["model_assessment"], "concern")
+        self.assertIn("Never", item["source_context"])
+
+    def test_warning_with_exception_does_not_hide_demand(self):
+        client = self.client({"observations": [{"category": "payment", "quote": "send a deposit by gift card",
+            "interpretation": "Deposit demand", "assessment": "concern"}], "claims_to_verify": [], "limitations": []})
+        result = analyze_content({"description": "We never charge fees, but send a deposit by gift card."}, client=client)
+        self.assertEqual(result["observations"][0]["assessment"], "concern")
     def test_explicit_request_rules_preserve_negation_and_warnings(self):
         quote = "send your bank password"
         self.assertTrue(explicit_request_concern(quote, "Please send your bank password to us"))

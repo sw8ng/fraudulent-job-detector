@@ -10,6 +10,30 @@ from check_employer_association import check_employer_association
 
 
 class AssociationTests(unittest.TestCase):
+    def test_tracking_variants_do_not_consume_page_budget(self):
+        requested = []
+        def handler(request):
+            requested.append(str(request.url))
+            if request.url.path == '/':
+                html = '<a href="/careers?utm_source=a">Careers</a><a href="/careers?utm_source=b">Careers</a>'
+            elif request.url.path == '/careers':
+                html = '<a href="/positions">Open positions</a>'
+            elif request.url.path == '/positions':
+                html = '<a href="/jobs/1">Software Engineer</a>'
+            else:
+                html = '<h1>Software Engineer</h1><p>San Mateo, CA</p>'
+            return httpx.Response(200, text=html, headers={"content-type": "text/html"})
+        result = self.check(handler)
+        self.assertEqual(result["status"], "matching_posting_found")
+        self.assertEqual(len(requested), 4)
+
+    def test_jobs_in_hostname_alone_is_not_a_careers_link(self):
+        requested = []
+        def handler(request):
+            requested.append(str(request.url))
+            return httpx.Response(200, text='<h1>Company</h1><a href="https://bountyjobs.com/">Our partner BountyJobs</a>', headers={"content-type": "text/html"})
+        self.check(handler)
+        self.assertFalse(any('bountyjobs.com' in url for url in requested))
     def test_exact_job_link_prioritized_after_large_index(self):
         def handler(request):
             html = ('<h1>Software Engineer</h1><p>San Mateo, CA</p>' if request.url.path == '/target'

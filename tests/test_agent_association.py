@@ -26,7 +26,7 @@ class AgentAssociationTests(unittest.TestCase):
 
     def test_requested_association_reaches_final_and_is_recorded(self):
         client = Mock()
-        client.chat.side_effect = [calls(("check_employer_association", self.arguments)), final()]
+        client.chat.side_effect = [calls(("check_employer_association", self.arguments)), calls(), final()]
         evidence = {"status": "matching_posting_found", "verified": False}
         with patch("assess_job.check_employer_association", return_value=evidence) as checker:
             result = assess_job(self.job, client=client, include_trace=True)

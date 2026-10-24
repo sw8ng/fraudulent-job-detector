@@ -53,6 +53,19 @@ def explicit_request_concern(quote, surrounding_text):
     return bool(password or gift_card)
 
 
+def clear_warning(sentence):
+    """Recognize explicit anti-fee/credential warnings, not arbitrary negation."""
+    text = " ".join(sentence.casefold().replace("’", "'").split()).strip()
+    if re.search(r"[.!?]\s+\w", text):
+        return False
+    if re.search(r"\b(?:but|except|however|unless|although)\b", text):
+        return False
+    denial = re.match(r"(?:we\s+)?(?:never|do not|don't|will never|will not|won't)\s+(?:require|ask|charge|request|conduct)\b", text)
+    warning = re.match(r"(?:never|do not|don't)\s+(?:send|share|provide|pay)\b", text)
+    subject = re.search(r"\b(?:fees?|deposits?|passwords?|bank|gift cards?|telegram)\b", text)
+    return bool((denial or warning) and subject)
+
+
 def analyze_content(job, *, client=None):
     """Return initial observations; keep only quotes present in the source text."""
     source = job.get("description") or job.get("raw_posting_text") or ""
@@ -113,9 +126,16 @@ def analyze_content(job, *, client=None):
                 item["quote_source"] = "raw_posting_text" if job.get("raw_posting_text") else source_field
                 # Keep the source sentence, so a clipped quote cannot remove a negation.
                 start = original.rfind(".", 0, original_match.start()) + 1
-                end = original.find(".", original_match.end())
+                end = original.find(".", max(original_match.start(), original_match.end() - 1))
                 sentence = original[start:end if end >= 0 else len(original)]
-                if field == "observations" and explicit_request_concern(item["quote"], sentence):
+                if field == "observations" and clear_warning(sentence):
+                    item["model_assessment"] = item["assessment"]
+                    item["assessment"] = "context"
+                    item["assessment_origin"] = "explicit_warning_rule"
+                    item["source_context"] = sentence.strip()
+                    item["model_interpretation"] = item["interpretation"]
+                    item["interpretation"] = "The source sentence explicitly warns against or denies this practice; it is not an applicant demand or proof of legitimacy."
+                elif field == "observations" and explicit_request_concern(item["quote"], sentence):
                     item["model_assessment"] = item["assessment"]
                     item["assessment"] = "concern"
                     item["assessment_origin"] = "explicit_request_rule"

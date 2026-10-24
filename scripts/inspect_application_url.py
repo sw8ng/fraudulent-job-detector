@@ -5,7 +5,7 @@ import ipaddress
 import json
 import socket
 from datetime import datetime, timezone
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import urlsplit
 
 import httpx
 import tldextract
@@ -48,52 +48,8 @@ def fetch(client, url):
         return response.status_code, response.headers.get("location")
 
 
-def lookup_domain(client, domain, now):
-    url = f"https://rdap.org/domain/{domain}"
-    for _ in range(6):
-        # Bootstrap providers redirect to the authoritative registry.
-        validate_public_url(url)
-        with client.stream("GET", url) as response:
-            if response.status_code in REDIRECT_CODES:
-                location = response.headers.get("location")
-                if not location:
-                    raise ValueError("RDAP redirect has no Location header")
-                url = urljoin(url, location)
-                continue
-            response.raise_for_status()
-            body = bytearray()
-            for chunk in response.iter_bytes():
-                body.extend(chunk)
-                if len(body) > 2_000_000:
-                    raise ValueError("RDAP response exceeds size limit")
-            record = json.loads(body)
-            break
-    else:
-        raise ValueError("RDAP redirect limit reached")
-    created = next((e.get("eventDate") for e in record.get("events", [])
-                    if e.get("eventAction") == "registration"), None)
-    age = None
-    if created:
-        date = datetime.fromisoformat(created.replace("Z", "+00:00"))
-        if date.tzinfo is None:
-            date = date.replace(tzinfo=timezone.utc)
-        age = (now - date).days
-        if age < 0:
-            raise ValueError("Registry registration date is in the future")
-    registrar = None
-    for entity in record.get("entities", []):
-        if "registrar" in entity.get("roles", []):
-            card = entity.get("vcardArray", [])
-            if len(card) == 2:
-                registrar = next((p[3] for p in card[1] if len(p) > 3 and p[0] == "fn"), None)
-            break
-    return {"domain_created": created, "domain_age_days": age,
-            "registrar": registrar, "domain_status": record.get("status", []),
-            "rdap_source_url": url, "lookup_success": True}
-
-
 def inspect_application_url(application_url: str, company_website: str | None = None):
-    """Inspect an application URL and return redirect and registration evidence.
+    """Inspect an application URL for redirects, destination, HTTPS and domain comparison.
 
     Args:
         application_url: Exact application URL supplied in the job posting.
@@ -106,8 +62,6 @@ def inspect_application_url(application_url: str, company_website: str | None = 
         "final_domain": None, "company_domain": None,
         "domain_matches_company": None, "https": None,
         "http_status": None, "redirect_lookup_success": False,
-        "domain_created": None, "domain_age_days": None, "registrar": None,
-        "domain_status": [], "rdap_source_url": None, "lookup_success": False,
         "errors": [],
     }
     if company_website:
@@ -124,10 +78,6 @@ def inspect_application_url(application_url: str, company_website: str | None = 
         if result["final_domain"]:
             if result["company_domain"]:
                 result["domain_matches_company"] = result["final_domain"] == result["company_domain"]
-            try:
-                result.update(lookup_domain(client, result["final_domain"], now))
-            except (httpx.HTTPError, OSError, ValueError, TypeError, AttributeError) as error:
-                result["errors"].append({"stage": "rdap", "message": str(error)})
     return result
 
 
