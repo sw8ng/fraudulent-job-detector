@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
@@ -14,14 +15,21 @@ def prepare_job(html_path):
     if path.suffix.lower() != ".html":
         raise ValueError("Choose a saved .html or .pdf file.")
 
-    soup = BeautifulSoup(path.read_bytes(), "html.parser")
-    # Remove page navigation and footer boilerplate before sending text to Qwen.
+    return prepare_html(path.read_bytes())
+
+
+def prepare_html(html, base_url=None):
+    """Clean saved or downloaded HTML, retaining link destinations beside labels."""
+    soup = BeautifulSoup(html, "html.parser")
+    # Use the same cleanup for saved postings and downloaded application pages.
     for tag in soup.find_all(["nav", "footer", "script", "style", "template"]):
         tag.decompose()
 
     # Keep link destinations next to their labels for the LLM.
     for link in soup.find_all("a", href=True):
         href = link["href"].strip()
+        if base_url and href and not href.startswith("#"):
+            href = urljoin(base_url, href)
         if href.lower().startswith(("http://", "https://", "mailto:", "tel:")):
             link.append(f" ({href})")
 

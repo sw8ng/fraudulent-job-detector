@@ -19,7 +19,7 @@ class SummaryTests(unittest.TestCase):
         client.chat.side_effect = [SimpleNamespace(message=SimpleNamespace(tool_calls=[tool])),
             response("The application redirects to example.com."), response("The URL stayed on example.com.", "high")]
         investigator = Mock(return_value={"redirect_lookup_success": True, "redirects": [], "final_domain": "example.com", "http_status": 200})
-        result = assess_job({"application_url": "https://example.com"}, client=client, investigator=investigator, include_trace=True)
+        result = assess_job({"application_url": "https://example.com"}, client=client, investigator=investigator, include_trace=True, model="test-model")
         investigator.assert_called_once()
         self.assertEqual(result["assessment"]["risk_level"], "low")
         self.assertEqual(result["investigation"]["summary_review"]["status"], "model_revised")
@@ -31,7 +31,7 @@ class SummaryTests(unittest.TestCase):
         bad = SimpleNamespace(done_reason="stop", message=SimpleNamespace(content=json.dumps({"risk_level": "low", "explanation": "It redirects to example.com."})))
         client.chat.side_effect = [SimpleNamespace(message=SimpleNamespace(tool_calls=[tool])), bad, bad]
         investigator = Mock(return_value={"redirect_lookup_success": True, "redirects": [], "final_domain": "example.com", "http_status": 200})
-        result = assess_job({"application_url": "https://example.com"}, client=client, investigator=investigator, include_trace=True)
+        result = assess_job({"application_url": "https://example.com"}, client=client, investigator=investigator, include_trace=True, model="test-model")
         self.assertEqual(result["investigation"]["summary_review"]["status"], "factual_fallback")
         self.assertIn("0 HTTP redirects", result["assessment"]["summary"])
         investigator.assert_called_once()

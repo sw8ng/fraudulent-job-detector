@@ -50,7 +50,7 @@ class CompanyTests(unittest.TestCase):
         client.chat.return_value = SimpleNamespace(done_reason="stop", message=SimpleNamespace(content=json.dumps({
             "selected_url": "https://hotel.com/", "match_strength": "tentative",
             "reason": "Wrong result", "remaining_uncertainty": "Unknown"})))
-        result = select_company_candidate({"company": "Acme"}, lookup, client)
+        result = select_company_candidate({"company": "Acme"}, lookup, client, model="test-model")
         self.assertIsNone(result["selected_url"])
         arguments = client.chat.call_args.kwargs
         self.assertNotIn("hotel.com", arguments["messages"][1]["content"])
@@ -59,7 +59,7 @@ class CompanyTests(unittest.TestCase):
 
     def test_no_name_matches_skip_model_selection(self):
         client = Mock()
-        result = select_company_candidate({}, {"candidates": [{"website": "https://hotel.com/", "name_match": False}]}, client)
+        result = select_company_candidate({}, {"candidates": [{"website": "https://hotel.com/", "name_match": False}]}, client, model="test-model")
         client.chat.assert_not_called()
         self.assertIsNone(result["selected_url"])
         self.assertEqual(result["reason"], "No matching candidate")
@@ -97,7 +97,7 @@ class CompanyTests(unittest.TestCase):
         def respond(url, strength):
             client.chat.return_value = SimpleNamespace(done_reason="stop", message=SimpleNamespace(content=json.dumps({
                 "selected_url": url, "match_strength": strength, "reason": "Evidence", "remaining_uncertainty": "Unverified"})))
-            return select_company_candidate({"company": "Acme"}, lookup, client)
+            return select_company_candidate({"company": "Acme"}, lookup, client, model="test-model")
         self.assertIsNone(respond("https://invented.com/", "tentative")["selected_url"])
         self.assertIsNone(respond(None, "unresolved")["selected_url"])
         self.assertEqual(respond("https://acme.com/", "tentative")["selected_url"], "https://acme.com/")
@@ -118,7 +118,7 @@ class CompanyTests(unittest.TestCase):
             SimpleNamespace(done_reason="stop", message=SimpleNamespace(content=json.dumps({"risk_level": "insufficient evidence", "explanation": "Unverified"}))),
         ]
         investigator = Mock(return_value={"domain_matches_company": True})
-        result = assess_job(posting, company_finder=finder, client=client, investigator=investigator, include_trace=True)
+        result = assess_job(posting, company_finder=finder, client=client, investigator=investigator, include_trace=True, model="test-model")
         investigator.assert_called_once_with(posting["application_url"], "https://acme.org/")
         self.assertEqual(result["investigation"]["company_lookup"]["selection"], selection)
         self.assertFalse(result["investigation"]["company_lookup"]["verified"])
@@ -182,7 +182,7 @@ class CompanyTests(unittest.TestCase):
         client.chat.side_effect = [SimpleNamespace(message=SimpleNamespace(tool_calls=[call])),
                                   SimpleNamespace(message=SimpleNamespace(tool_calls=[])),
                                   SimpleNamespace(done_reason="stop", message=SimpleNamespace(content=json.dumps({"risk_level": "insufficient evidence", "explanation": "Unverified candidate"})))]
-        result = assess_job(posting, client=client, investigator=investigator, company_finder=finder, include_trace=True)
+        result = assess_job(posting, client=client, investigator=investigator, company_finder=finder, include_trace=True, model="test-model")
         investigator.assert_called_once_with(posting["application_url"], "https://acme.com/")
         self.assertIsNone(posting["company_website"])
         self.assertEqual(result["investigation"]["company_lookup"], lookup)
@@ -193,7 +193,7 @@ class CompanyTests(unittest.TestCase):
         finder = Mock()
         client = Mock()
         client.chat.return_value = SimpleNamespace(done_reason="stop", message=SimpleNamespace(content=json.dumps({"risk_level": "low", "explanation": "Not verified"})))
-        assess_job({"company": "Acme", "company_website": "https://acme.com"}, client=client, company_finder=finder)
+        assess_job({"company": "Acme", "company_website": "https://acme.com"}, client=client, company_finder=finder, model="test-model")
         finder.assert_not_called()
 
 

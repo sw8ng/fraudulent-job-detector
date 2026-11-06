@@ -1,4 +1,5 @@
 import json
+import argparse
 import os
 import sys
 from pathlib import Path
@@ -10,7 +11,6 @@ from ollama import Client, ResponseError
 from prepare_jobs import prepare_job
 
 
-MODEL = "qwen3.5:9b"
 
 
 JOB_SCHEMA = {
@@ -68,7 +68,7 @@ JOB_SCHEMA = {
     },
 }
 
-# Require every field to appear in Qwen's JSON.
+# Require every field to appear in the model's JSON.
 JOB_SCHEMA["required"] = list(JOB_SCHEMA["properties"].keys())
 JOB_SCHEMA["additionalProperties"] = False
 
@@ -93,8 +93,8 @@ for field, guidance in FIELD_GUIDANCE.items():
     JOB_SCHEMA["properties"][field]["description"] = guidance
 
 
-def extract_job(raw_posting_text):
-    """Use local Qwen to extract structured job information."""
+def extract_job(raw_posting_text, *, model):
+    """Use the selected local model to extract structured job information."""
 
     if not raw_posting_text.strip():
         raise ValueError("There is no posting text to extract.")
@@ -140,22 +140,30 @@ Rules:
     # Extract compact fields before copying the long description. Keeping these
     # separate prevents the copying task from crowding out field extraction.
     job = {}
+    general_fields = []
+    separate_fields = ("description", "education_requirements", "experience_requirements")
+    for field in JOB_SCHEMA["properties"]:
+        if field not in separate_fields:
+            general_fields.append(field)
     groups = [
-        [field for field in JOB_SCHEMA["properties"] if field not in
-         ("description", "education_requirements", "experience_requirements")],
+        general_fields,
         ["education_requirements", "experience_requirements"],
         ["description"],
     ]
     for fields in groups:
+        properties = {}
+        for field in fields:
+            properties[field] = JOB_SCHEMA["properties"][field]
         schema = {
             "type": "object",
-            "properties": {field: JOB_SCHEMA["properties"][field] for field in fields},
+            "properties": properties,
             "required": fields,
             "additionalProperties": False,
         }
         task_prompt = prompt + "\nFor this pass return ONLY these fields: " + ", ".join(fields)
         task_prompt += "\nReturn JSON matching this schema:\n" + json.dumps(schema)
-        job.update(_extract_fields(raw_posting_text, task_prompt, schema))
+        extracted_fields = _extract_fields(raw_posting_text, task_prompt, schema, model=model)
+        job.update(extracted_fields)
     validate(instance=job, schema=JOB_SCHEMA)
     # Preserve cents, but serialize whole salary amounts without a trailing .0.
     for field in ("salary_min", "salary_max"):
@@ -165,12 +173,12 @@ Rules:
     return job
 
 
-def _extract_fields(raw_posting_text, prompt, schema):
+def _extract_fields(raw_posting_text, prompt, schema, *, model):
     """Run and validate one bounded extraction pass."""
     # A local model can take a few minutes, but should not wait forever.
     client = Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"), timeout=300)
     response = client.chat(
-        model=MODEL,
+        model=model,
         messages=[
             {
                 "role": "system",
@@ -211,45 +219,55 @@ def _extract_fields(raw_posting_text, prompt, schema):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Extract saved postings with a selected Ollama model")
+    parser.add_argument("--model", required=True)
+    parser.add_argument("--force", action="store_true", help="Re-extract files even when outputs exist")
+    parser.add_argument("--output-dir", type=Path, help="Use a separate folder for extraction comparisons")
+    parser.add_argument("--input-dir", type=Path, help="Folder containing saved HTML and PDF postings")
+    args = parser.parse_args()
     project_dir = Path(__file__).resolve().parent.parent
-    input_dir = project_dir / "data" / "input"
-    output_dir = project_dir / "data" / "output"
+    input_dir = args.input_dir or project_dir / "data" / "input"
+    output_dir = args.output_dir or project_dir / "data" / "output"
 
     try:
         input_dir.mkdir(parents=True, exist_ok=True)
         output_dir.mkdir(parents=True, exist_ok=True)
-        html_files = []
+        input_files = []
         for path in sorted(input_dir.iterdir()):
             if path.is_file() and path.suffix.lower() in (".html", ".pdf"):
-                html_files.append(path)
+                input_files.append(path)
     except OSError as error:
         print(f"Error preparing folders: {error}", file=sys.stderr)
         sys.exit(1)
 
-    if not html_files:
+    if not input_files:
         print(f"No inputs found. Save .html or .pdf files in {input_dir} and run again.")
         sys.exit(0)
 
     failed = False
-    for html_path in html_files:
+    for input_path in input_files:
         try:
             # Keep PDF outputs distinct from an HTML save of the same posting.
-            output_name = html_path.name if html_path.suffix.lower() == ".pdf" else html_path.stem
+            if input_path.suffix.lower() == ".pdf":
+                output_name = input_path.name
+            else:
+                output_name = input_path.stem
             output_path = output_dir / f"{output_name}.json"
-            if output_path.is_file():
-                print(f"Skipping {html_path.name}: output already exists.", flush=True)
+            if output_path.is_file() and not args.force:
+                print(f"Skipping {input_path.name}: output already exists.", flush=True)
                 continue
 
-            # 1. Read the HTML and prepare its text in memory.
-            print(f"Preparing {html_path.name}...", flush=True)
-            text = prepare_job(html_path)
+            # 1. Read the saved HTML or PDF and prepare its text in memory.
+            print(f"Preparing {input_path.name}...", flush=True)
+            text = prepare_job(input_path)
 
-            # 2. Ask Qwen for structured fields and validate its response.
-            print(f"Extracting with {MODEL}...", flush=True)
-            job = extract_job(text)
+            # 2. Ask the selected model for structured fields and validate its response.
+            print(f"Extracting with {args.model}...", flush=True)
+            job = extract_job(text, model=args.model)
 
             # 3. Keep the original evidence alongside the model's fields.
-            job["source_file"] = html_path.name
+            job["source_file"] = input_path.name
+            job["extraction_model"] = args.model
             job["raw_posting_text"] = text
 
             # 4. Save only the final JSON.
@@ -261,7 +279,7 @@ if __name__ == "__main__":
         except (OSError, ValueError, ResponseError, HTTPError) as error:
             failed = True
             print(
-                f"Error processing {html_path.name} ({type(error).__name__}): {error}",
+                f"Error processing {input_path.name} ({type(error).__name__}): {error}",
                 file=sys.stderr,
             )
 

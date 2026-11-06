@@ -32,8 +32,11 @@ def lookup_domain(client, domain, now):
             break
     else:
         raise ValueError("RDAP redirect limit reached")
-    created = next((e.get("eventDate") for e in record.get("events", [])
-                    if e.get("eventAction") == "registration"), None)
+    created = None
+    for event in record.get("events", []):
+        if event.get("eventAction") == "registration":
+            created = event.get("eventDate")
+            break
     age = None
     if created:
         date = datetime.fromisoformat(created.replace("Z", "+00:00"))
@@ -47,7 +50,10 @@ def lookup_domain(client, domain, now):
         if "registrar" in entity.get("roles", []):
             card = entity.get("vcardArray", [])
             if len(card) == 2:
-                registrar = next((p[3] for p in card[1] if len(p) > 3 and p[0] == "fn"), None)
+                for contact_field in card[1]:
+                    if len(contact_field) > 3 and contact_field[0] == "fn":
+                        registrar = contact_field[3]
+                        break
             break
     return {"domain_created": created, "domain_age_days": age,
             "registrar": registrar, "domain_status": record.get("status", []),

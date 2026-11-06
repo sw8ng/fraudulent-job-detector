@@ -43,6 +43,10 @@ def build_report(job, assessment, investigation):
         else:
             checks["job_on_company_careers_page"] = claim("unresolved", "The bounded check did not establish a match (" + str(association.get("status")) + "); absence or failed access is not a contradiction.", ["association-1"])
     for index, call in enumerate(investigation.get("tool_calls", []), 1):
+        if call.get("tool") == "collect_application_page":
+            result = call.get("evidence", {})
+            evidence(f"application-page-{index}", "application_page_content", result, result.get("final_url"))
+            continue
         if call.get("tool") == "get_company_domain_info":
             result = call.get("evidence", {})
             identifier = evidence(f"company-domain-{index}", "company_domain_registration", result, result.get("rdap_source_url"))

@@ -83,7 +83,7 @@ class EmailTests(unittest.TestCase):
             SimpleNamespace(message=SimpleNamespace(tool_calls=[])),
             SimpleNamespace(done_reason="stop", message=SimpleNamespace(content=json.dumps({
                 "risk_level": "insufficient evidence", "explanation": "Email domain agreement does not establish affiliation."})))]
-        report = assess_job({"contact_email": "jobs@company.com", "company_website": "https://company.com"}, client=client, include_trace=True)
+        report = assess_job({"contact_email": "jobs@company.com", "company_website": "https://company.com"}, client=client, include_trace=True, model="test-model")
         trace = report["investigation"]["tool_calls"]
         self.assertIn("error", trace[0]["evidence"])
         self.assertEqual(trace[1]["evidence"]["emails"][0]["comparison"], "matching_domain")
@@ -94,6 +94,6 @@ class EmailTests(unittest.TestCase):
         client = Mock()
         client.chat.return_value = SimpleNamespace(done_reason="stop", message=SimpleNamespace(content=json.dumps({
             "risk_level": "insufficient evidence", "explanation": "No contact information."})))
-        report = assess_job({}, client=client, include_trace=True)
+        report = assess_job({}, client=client, include_trace=True, model="test-model")
         self.assertEqual(report["claim_checks"]["recruiter_affiliation"]["status"], "not_checked")
         self.assertNotIn("tools", client.chat.call_args.kwargs)

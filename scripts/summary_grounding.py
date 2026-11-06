@@ -22,6 +22,8 @@ def observed_facts(investigation):
     website_statuses = [p["http_status"] for p in association.get("pages_checked", [])
                         if p.get("http_status") and website and page_key(p["url"]) == page_key(website)]
     return {"url_observations": urls,
+            "application_page_observations": [call["evidence"] for call in investigation.get("tool_calls", [])
+                if call.get("tool") == "collect_application_page" and not call.get("evidence", {}).get("error")],
             "content_concern_quotes": [item["quote"] for item in (investigation.get("content_analysis") or {}).get("observations", [])
                                        if item.get("assessment") == "concern" and item.get("quote")],
             "company_website_http_statuses": website_statuses,
@@ -60,7 +62,11 @@ def summary_issues(summary, facts):
                 pattern = re.escape(domain) + r"[^.!?;]{0,50}\b(?:registered|created)\b[^.!?;]{0,25}" + re.escape(date[:4])
                 if re.search(pattern, summary, re.I):
                     issues.append("Company registration history is attributed to a different application domain that was not investigated for registration.")
-    if urls and all(u["observed_http_redirect_count"] == 0 for u in urls):
+    page_redirects_observed = False
+    for page in facts.get("application_page_observations", []):
+        if page.get("redirects"):
+            page_redirects_observed = True
+    if urls and all(u["observed_http_redirect_count"] == 0 for u in urls) and not page_redirects_observed:
         for match in re.finditer(r"\bredirect(?:s|ed|ing)?\s+(?:to|through|toward)\b", summary, re.I):
             preceding = summary[max(0, match.start() - 35):match.start()]
             if not re.search(r"\b(?:no|not|never|without)\b[^.!?]*$", preceding, re.I):
@@ -86,6 +92,11 @@ def factual_summary(facts):
             parts.append("The separate company-domain registration lookup did not return registration evidence.")
     for item in facts["url_observations"]:
         parts.append(f"URL inspection observed {item['observed_http_redirect_count']} HTTP redirects and a destination on {item['final_domain']} (HTTP {item['http_status']}).")
+    for page in facts.get("application_page_observations", []):
+        if page.get("extraction_success"):
+            parts.append("Application destination HTML text was collected; see its recorded URL and text. This does not establish that an application form was reached or verify legitimacy.")
+        else:
+            parts.append("Application page collection was unavailable (" + str(page.get("reason")) + "); this is not fraud evidence.")
     status = facts["association_status"]
     if status == "matching_posting_found":
         parts.append("A matching posting was found on the candidate site or a page linked from it; this supports association only.")

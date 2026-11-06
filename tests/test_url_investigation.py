@@ -110,7 +110,7 @@ class AgentTests(unittest.TestCase):
             SimpleNamespace(done_reason="length", message=SimpleNamespace(content='{')),
             SimpleNamespace(done_reason="stop", message=SimpleNamespace(content=json.dumps({"risk_level": "insufficient evidence", "explanation": "Not verified"}))),
         ]
-        result = assess_job({}, client=client)
+        result = assess_job({}, client=client, model="test-model")
         self.assertEqual(result["risk_level"], "insufficient evidence")
         self.assertEqual(client.chat.call_count, 2)
 
@@ -119,7 +119,7 @@ class AgentTests(unittest.TestCase):
         client = Mock()
         client.chat.return_value = SimpleNamespace(done_reason="length", message=SimpleNamespace(content='{'))
         with self.assertRaisesRegex(ValueError, "retry"):
-            assess_job({}, client=client)
+            assess_job({}, client=client, model="test-model")
         self.assertEqual(client.chat.call_count, 2)
 
     def run_agent(self, arguments):
@@ -131,7 +131,7 @@ class AgentTests(unittest.TestCase):
             SimpleNamespace(done_reason="stop", message=SimpleNamespace(content=json.dumps({"risk_level": "insufficient evidence", "explanation": "Not verified"}))),
         ]
         investigator = Mock(return_value={"lookup_success": False})
-        result = assess_job({"application_url": "https://example.com", "company_website": None}, client=client, investigator=investigator, include_trace=True)
+        result = assess_job({"application_url": "https://example.com", "company_website": None}, client=client, investigator=investigator, include_trace=True, model="test-model")
         return result, client, investigator
 
     def test_evidence_sent_back_to_model(self):

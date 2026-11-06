@@ -27,7 +27,7 @@ class CompanyDomainTests(unittest.TestCase):
         registry = {"domain": "company.com", "lookup_success": True,
                     "domain_created": "2020-01-01T00:00:00Z", "domain_age_days": 2000}
         with patch("assess_job.get_domain_info", return_value=registry) as lookup:
-            report = assess_job({"company_website": "https://company.com"}, client=client, include_trace=True)
+            report = assess_job({"company_website": "https://company.com"}, client=client, include_trace=True, model="test-model")
         lookup.assert_called_once_with("https://company.com")
         trace = report["investigation"]["tool_calls"]
         self.assertIn("error", trace[0]["evidence"])
@@ -44,7 +44,7 @@ class CompanyDomainTests(unittest.TestCase):
         investigator = Mock(return_value={})
         with patch("assess_job.get_domain_info") as lookup:
             report = assess_job({"application_url": "https://application.com"}, client=client,
-                                investigator=investigator, include_trace=True)
+                                investigator=investigator, include_trace=True, model="test-model")
         lookup.assert_not_called()
         self.assertIn("error", report["investigation"]["tool_calls"][0]["evidence"])
 
@@ -52,6 +52,6 @@ class CompanyDomainTests(unittest.TestCase):
         client = Mock()
         client.chat.side_effect = [selection(("get_company_domain_info", {})), final()]
         with patch("assess_job.get_domain_info", return_value={"domain": "company.com", "lookup_success": False, "errors": [{"message": "timeout"}]}):
-            report = assess_job({"company_website": "https://company.com"}, client=client, include_trace=True)
+            report = assess_job({"company_website": "https://company.com"}, client=client, include_trace=True, model="test-model")
         self.assertEqual(report["claim_checks"]["company_website"]["status"], "unresolved")
         self.assertIn("lookup failure is not fraud", report["claim_checks"]["company_website"]["reason"])

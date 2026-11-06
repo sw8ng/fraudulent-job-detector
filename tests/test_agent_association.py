@@ -29,7 +29,7 @@ class AgentAssociationTests(unittest.TestCase):
         client.chat.side_effect = [calls(("check_employer_association", self.arguments)), calls(), final()]
         evidence = {"status": "matching_posting_found", "verified": False}
         with patch("assess_job.check_employer_association", return_value=evidence) as checker:
-            result = assess_job(self.job, client=client, include_trace=True)
+            result = assess_job(self.job, client=client, include_trace=True, model="test-model")
         checker.assert_called_once_with(**self.arguments)
         self.assertEqual(result["investigation"]["employer_association"], evidence)
         self.assertEqual(result["investigation"]["tool_calls"][0]["tool"], "check_employer_association")
@@ -37,9 +37,9 @@ class AgentAssociationTests(unittest.TestCase):
 
     def test_agent_may_skip_association(self):
         client = Mock()
-        client.chat.side_effect = [calls(), final()]
+        client.chat.side_effect = [calls(), calls(), final()]
         with patch("assess_job.check_employer_association") as checker:
-            result = assess_job(self.job, client=client, include_trace=True)
+            result = assess_job(self.job, client=client, include_trace=True, model="test-model")
         checker.assert_not_called()
         self.assertEqual(result["investigation"]["employer_association"]["status"], "not_requested")
 
@@ -47,7 +47,7 @@ class AgentAssociationTests(unittest.TestCase):
         client = Mock()
         client.chat.side_effect = [calls(("check_employer_association", {**self.arguments, "company_website": "https://other.com"})), final()]
         with patch("assess_job.check_employer_association") as checker:
-            result = assess_job(self.job, client=client, include_trace=True)
+            result = assess_job(self.job, client=client, include_trace=True, model="test-model")
         checker.assert_not_called()
         self.assertIn("error", result["investigation"]["tool_calls"][0]["evidence"])
 
@@ -59,7 +59,7 @@ class AgentAssociationTests(unittest.TestCase):
                   ("check_employer_association", self.arguments)), final()]
         investigator = Mock(return_value={"final_domain": "example.com"})
         with patch("assess_job.check_employer_association", return_value={"status": "could_not_check"}) as checker:
-            result = assess_job(job, client=client, investigator=investigator, include_trace=True)
+            result = assess_job(job, client=client, investigator=investigator, include_trace=True, model="test-model")
         investigator.assert_called_once()
         checker.assert_called_once()
         self.assertIn("Duplicate", result["investigation"]["tool_calls"][1]["evidence"]["error"])

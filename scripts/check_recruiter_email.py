@@ -31,12 +31,19 @@ def posting_emails(job):
                 continue
             seen.add(address.casefold())
             # Prefer original surrounding text over an isolated extracted field.
-            original_match = re.search(re.escape(address), raw, re.I) if raw else None
-            quote_source = raw if original_match else source
+            original_match = None
+            if raw:
+                original_match = re.search(re.escape(address), raw, re.I)
+            if original_match:
+                quote_source = raw
+                quote_source_field = "raw_posting_text"
+            else:
+                quote_source = source
+                quote_source_field = field
             quote_match = original_match or match
             records.append({"email": address, "source_field": field,
                             "quote": quote_source[max(0, quote_match.start() - 80):quote_match.end() + 80],
-                            "quote_source": "raw_posting_text" if original_match else field,
+                            "quote_source": quote_source_field,
                             "present_in_raw_posting": bool(raw)})
     return records
 
