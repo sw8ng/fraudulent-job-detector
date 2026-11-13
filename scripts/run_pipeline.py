@@ -3,6 +3,7 @@
 import argparse
 import subprocess
 import sys
+import time
 import webbrowser
 from pathlib import Path
 
@@ -49,9 +50,14 @@ def main():
     parser.add_argument("--force-extraction", action="store_true", help="Also re-extract existing posting outputs")
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--no-open", action="store_true", help="Save the visual without opening a browser")
+    parser.add_argument("--max-seconds", type=float, default=300, help="Hard limit per assessment")
+    parser.add_argument("--max-total-seconds", type=float, default=600, help="Total extraction/comparison budget")
     args = parser.parse_args()
     if args.repeats < 1:
         parser.error("--repeats must be positive")
+    if args.max_seconds <= 0 or args.max_total_seconds <= 0:
+        parser.error("Time limits must be positive")
+    started = time.perf_counter()
     seen_models = []
     for model in args.models:
         if model in seen_models:
@@ -68,7 +74,11 @@ def main():
     if args.force_extraction:
         extraction.append("--force")
     print("Step 1: extract missing outputs (existing outputs are kept unless --force-extraction is set).", flush=True)
-    result = subprocess.run(extraction)
+    try:
+        result = subprocess.run(extraction, timeout=args.max_total_seconds)
+    except subprocess.TimeoutExpired:
+        print("Pipeline time limit reached during extraction. Completed output files were kept.", file=sys.stderr)
+        return 124
     if result.returncode != 0:
         print("Extraction failed. Comparison was not started.", file=sys.stderr)
         return result.returncode
@@ -84,6 +94,11 @@ def main():
     for path in paths:
         comparison.append(str(path))
     comparison.extend(["--output", str(args.output), "--repeats", str(args.repeats)])
+    remaining = args.max_total_seconds - (time.perf_counter() - started)
+    if remaining <= 0:
+        print("Pipeline time limit reached. Extracted outputs were kept.", file=sys.stderr)
+        return 124
+    comparison.extend(["--max-seconds", str(args.max_seconds), "--max-total-seconds", str(remaining)])
     if args.force:
         comparison.append("--force")
     print("Step 2: compare the selected models using the extracted outputs.", flush=True)

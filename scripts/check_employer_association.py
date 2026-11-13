@@ -63,7 +63,7 @@ def check_employer_association(company_website, job_title, location=None, *, cli
     """A found match supports association with a candidate site, not identity verification."""
     result = {"status": "could_not_check", "company_website": company_website,
               "job_title": job_title, "location": location, "verified": False,
-              "matches": [], "pages_checked": [], "errors": [],
+              "matches": [], "pages_checked": [], "discovered_links": [], "errors": [],
               "limitations": ["Company website is an unverified candidate or supplied claim.",
                               "Checks at most four distinct HTML pages and eight candidate fetch attempts, without JavaScript or login; absence is not fraud evidence."]}
     if not company_website or not job_title:
@@ -120,6 +120,7 @@ def check_employer_association(company_website, job_title, location=None, *, cli
                 # External ATS pages are eligible only through links on inspected pages.
                 if (careers_link(target, label)
                         or (title and title in normalized(label))):
+                    result["discovered_links"].append({"from_url": final_url, "to_url": target, "label": label[:300]})
                     if target not in visited and target not in queue:
                         if title and title in normalized(label):
                             if len(queue) >= 12:

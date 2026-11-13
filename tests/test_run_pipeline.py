@@ -1,4 +1,5 @@
 import sys
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -57,6 +58,13 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(run_pipeline.main(), 1)
         self.assertEqual(run.call_count, 1)
         browser.assert_not_called()
+
+    def test_extraction_timeout_stops_pipeline_and_keeps_existing_outputs(self):
+        with patch.object(sys, "argv", self.argv + ["--max-total-seconds", "1"]), \
+             patch("run_pipeline.subprocess.run", side_effect=subprocess.TimeoutExpired("extraction", 1)) as run:
+            self.assertEqual(run_pipeline.main(), 124)
+        self.assertEqual(run.call_count, 1)
+        self.assertTrue((self.outputs / "Job.pdf.json").is_file())
 
     def test_missing_output_stops_before_comparison(self):
         (self.outputs / "Job.pdf.json").unlink()

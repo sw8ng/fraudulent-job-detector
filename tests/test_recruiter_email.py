@@ -15,6 +15,32 @@ class EmailTests(unittest.TestCase):
     def check(self, address, website="https://company.com"):
         return check_recruiter_email({"contact_email": address}, website)["emails"][0]
 
+    def test_full_source_scanned_when_description_exists(self):
+        records = posting_emails({"description": "Build software.",
+                                 "raw_posting_text": "Build software. Apply: jobs@company.com"})
+        self.assertEqual(records[0]["email"], "jobs@company.com")
+        self.assertEqual(records[0]["source_field"], "raw_posting_text")
+
+    def test_encoded_mailto_keeps_original_quote(self):
+        raw = "Embedded PDF links: mailto:jobs%40company.com?subject=Application"
+        records = posting_emails({"contact_email": "jobs@company.com",
+                                 "description": "Build software.", "raw_posting_text": raw})
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["email"], "jobs@company.com")
+        self.assertIn("jobs%40company.com", records[0]["quote"])
+
+    def test_mailto_recipient_fields_not_subject_or_body(self):
+        raw = "mailto:jobs%40company.com?cc=team%40company.com&subject=ignore@other.com&body=skip@other.com"
+        records = posting_emails({"raw_posting_text": raw})
+        self.assertEqual([r["email"] for r in records], ["jobs@company.com", "team@company.com"])
+
+    def test_prepared_html_and_pdf_link_text(self):
+        from prepare_jobs import prepare_html
+        text = prepare_html('<p>Apply here <a href="mailto:jobs%40company.com">Contact Recruiting</a></p>')
+        self.assertEqual(posting_emails({"raw_posting_text": text})[0]["email"], "jobs@company.com")
+        text = "Role description.\nEmbedded PDF links (page destinations; labels may be unavailable):\nmailto:jobs%40company.com"
+        self.assertEqual(posting_emails({"raw_posting_text": text})[0]["email"], "jobs@company.com")
+
     def test_company_subdomain_match(self):
         self.assertEqual(self.check("jobs@recruiting.company.com")["comparison"], "matching_domain")
 
@@ -32,9 +58,9 @@ class EmailTests(unittest.TestCase):
         result = check_recruiter_email({"contact_email": "jobs@agency.com"})
         report = build_report({}, {"risk_level": "insufficient evidence", "explanation": "No company website."}, {
             "tool_calls": [{"tool": "check_recruiter_email", "evidence": result}]})
-        claim = report["claim_checks"]["recruiter_affiliation"]
+        claim = report["claim_checks"]["email_domain_consistency"]
         self.assertEqual(claim["status"], "unresolved")
-        self.assertIn("no valid candidate company domain", claim["reason"])
+        self.assertIn("No valid candidate company domain", claim["reason"])
         self.assertNotIn("were compared", claim["reason"])
 
     def test_case_and_idna(self):
@@ -70,9 +96,9 @@ class EmailTests(unittest.TestCase):
             evidence = check_recruiter_email({"contact_email": address}, "https://company.com")
             report = build_report({}, {"risk_level": "low", "explanation": "Limited evidence."}, {
                 "tool_calls": [{"tool": "check_recruiter_email", "evidence": evidence}]})
-            self.assertEqual(report["claim_checks"]["recruiter_affiliation"]["status"], "unresolved")
+            self.assertEqual(report["claim_checks"]["email_domain_consistency"]["status"], "supported" if address == "jobs@company.com" else "different_domain")
             self.assertEqual(report["key_findings"]["suspicious"], [])
-            self.assertEqual(report["claim_checks"]["recruiter_affiliation"]["evidence_ids"], ["email-1"])
+            self.assertEqual(report["claim_checks"]["email_domain_consistency"]["evidence_ids"], ["email-1"])
 
     def test_agent_validates_arguments_and_executes_once(self):
         def call(args):
@@ -88,12 +114,12 @@ class EmailTests(unittest.TestCase):
         self.assertIn("error", trace[0]["evidence"])
         self.assertEqual(trace[1]["evidence"]["emails"][0]["comparison"], "matching_domain")
         self.assertIn("error", trace[2]["evidence"])
-        self.assertEqual(report["claim_checks"]["recruiter_affiliation"]["status"], "unresolved")
+        self.assertEqual(report["claim_checks"]["email_domain_consistency"]["status"], "supported")
 
     def test_unavailable_without_email(self):
         client = Mock()
         client.chat.return_value = SimpleNamespace(done_reason="stop", message=SimpleNamespace(content=json.dumps({
             "risk_level": "insufficient evidence", "explanation": "No contact information."})))
         report = assess_job({}, client=client, include_trace=True, model="test-model")
-        self.assertEqual(report["claim_checks"]["recruiter_affiliation"]["status"], "not_checked")
+        self.assertEqual(report["claim_checks"]["email_domain_consistency"]["status"], "not_checked")
         self.assertNotIn("tools", client.chat.call_args.kwargs)

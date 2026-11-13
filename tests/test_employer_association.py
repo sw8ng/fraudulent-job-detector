@@ -57,6 +57,7 @@ class AssociationTests(unittest.TestCase):
         self.assertEqual(result["status"], "matching_posting_found")
         self.assertEqual(len(result["pages_checked"]), 2)
         self.assertFalse(result["verified"])
+        self.assertIn({"from_url": "https://example.com/", "to_url": "https://ats.example.org/jobs/1", "label": "Software Engineer"}, result["discovered_links"])
 
     def test_title_only_elsewhere_is_not_a_matching_posting(self):
         result = self.check(lambda _: httpx.Response(200, text='<h1>Our company</h1><p>Software Engineer San Mateo, CA</p>', headers={"content-type": "text/html"}))

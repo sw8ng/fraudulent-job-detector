@@ -11,7 +11,84 @@ def embedded_font(filename):
     return base64.b64encode(font_path.read_bytes()).decode("ascii")
 
 
+def timing_parts(run, tool_calls, company_search=False):
+    """Order measured calls by selection round; keep unrecorded time explicit."""
+    labels = {
+        "content_analysis": "Content Analysis",
+        "company_selection": "Company Candidate Selection",
+        "tool_selection": "Tool Selection",
+        "final_assessment": "Final Assessment",
+        "summary_correction": "Summary Correction",
+        "inspect_application_url": "URL Inspection",
+        "check_employer_association": "Employer Association",
+        "collect_application_page": "Application-Page Collection",
+        "get_company_domain_info": "Company Domain Investigation",
+        "check_recruiter_email": "Email Domain Comparison",
+    }
+    parts = []
+    counts = {}
+    calls = []
+    used_tools = set()
+    selection_round = 0
+    for call in run.get("model_calls", []):
+        stage = call.get("stage", "model")
+        calls.append((stage, call.get("seconds", 0), "Model"))
+        if stage != "tool_selection":
+            continue
+        selection_round += 1
+        requested = [request["name"] for request in call.get("raw_tool_calls", [])]
+        for index, tool in enumerate(tool_calls):
+            if index in used_tools:
+                continue
+            if tool.get("round") is not None:
+                belongs_here = tool["round"] == selection_round
+            else:
+                # Older reports have no round number; match recorded requests.
+                belongs_here = tool.get("tool") in requested
+                if belongs_here:
+                    requested.remove(tool["tool"])
+            if belongs_here:
+                calls.append((tool.get("tool", "tool"), tool.get("seconds", 0), "Tool"))
+                used_tools.add(index)
+    for index, tool in enumerate(tool_calls):
+        if index not in used_tools:
+            calls.append((tool.get("tool", "tool"), tool.get("seconds", 0), "Tool (order unrecorded)"))
+    remaining = max(0, run.get("seconds") or 0)
+    for name, seconds, kind in calls:
+        counts[name] = counts.get(name, 0) + 1
+        label = labels.get(name, name.replace("_", " ").title())
+        if kind == "Model":
+            label += " " + str(counts[name])
+        label = kind + ": " + label
+        measured = min(max(0, seconds or 0), remaining)
+        remaining = max(0, remaining - measured)
+        parts.append({"name": name, "label": label, "seconds": measured})
+    if remaining > 0:
+        label = "Unmeasured Time (Position Unrecorded)"
+        if company_search:
+            label += " (Includes Company Search)"
+        parts.append({"name": "unmeasured", "label": label, "seconds": remaining})
+    return parts
+
+
 def write_dashboard(experiment, path):
+    # Enrich the display from saved reports without changing the experiment JSON.
+    saved_runs = experiment.get("runs", [])
+    experiment = dict(experiment)
+    experiment["runs"] = []
+    for original in saved_runs:
+        run = dict(original)
+        investigation = {}
+        filename = run.get("report")
+        if filename and Path(filename).name == filename:
+            try:
+                report = json.loads((path.parent / filename).read_text(encoding="utf-8"))
+                investigation = report.get("investigation", {})
+            except (OSError, ValueError):
+                pass
+        calls = investigation.get("tool_calls", run.get("tool_calls", []))
+        run["timing_parts"] = timing_parts(run, calls, investigation.get("company_lookup") is not None)
+        experiment["runs"].append(run)
     data = json.dumps(experiment, ensure_ascii=True).replace("<", "\\u003c")
     template = r'''<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -24,10 +101,10 @@ body{font:14px 'IBM Plex Mono',monospace;background:#050505;color:#f5f5f5;margin
 h1{margin-bottom:8px}p{max-width:1000px;line-height:1.5}label{display:inline-block;margin:14px 22px 14px 0}
 select{font:inherit;color:#fff;background:#161616;padding:8px;border:1px solid #444;border-radius:6px;max-width:100%}section{background:#111;border:1px solid #2a2a2a;padding:22px;margin:20px 0;border-radius:12px;overflow:auto}
 .bar-row{margin:15px 0}.bar-label{font-size:14px;margin-bottom:5px}.bar{display:flex;height:23px;min-width:2px;border-radius:4px;overflow:hidden}
-.model{background:#62a8ff}.tool{background:#f1b65b}.other{background:#b79cff}.legend span{margin-right:22px}.legend b{display:inline-block;width:12px;height:12px;margin-right:5px}
+.legend{display:flex;flex-wrap:wrap;gap:12px 22px;margin-bottom:24px;font-size:12px}.legend span{display:inline-flex;align-items:center}.legend b{display:inline-block;width:12px;height:12px;margin-right:7px;flex-shrink:0}
 table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:11px 9px;border-bottom:1px solid #333;vertical-align:top}th{white-space:nowrap;font-weight:600}
 pre{font:12px 'IBM Plex Mono',monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:#080808;border:1px solid #333;padding:12px}.failed{color:#ff8b95;font-weight:600}a{color:#8fc6ff}summary{cursor:pointer}select:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid #8fc6ff;outline-offset:3px}
-.status-completed{color:#7ee2a8}.status-failed{color:#ff8b95}.status-completed,.status-failed{display:inline-block;padding:3px 7px;border:1px solid currentColor;border-radius:4px;margin-bottom:6px}.risk{display:block}.risk-low{color:#8fc6ff}.risk-medium{color:#f1b65b}.risk-high{color:#ff8b95}.risk-unknown{color:#c9b8ff}
+.status-completed{color:#7ee2a8}.status-failed{color:#ff8b95}.status-timed-out{color:#f1b65b}.status-not-run{color:#aaa}.status-completed,.status-failed,.status-timed-out,.status-not-run{display:inline-block;padding:3px 7px;border:1px solid currentColor;border-radius:4px;margin-bottom:6px}.risk{display:block}.risk-low{color:#8fc6ff}.risk-medium{color:#f1b65b}.risk-high{color:#ff8b95}.risk-unknown{color:#c9b8ff}
 .expanded-cell{padding:18px 0}.expanded-panel{padding:18px;border:1px solid #333;border-left:3px solid #62a8ff;background:#0a0a0a}.expanded-panel h3{font-size:14px;margin:0 0 14px;overflow-wrap:anywhere}.expanded-content{margin-bottom:0}.expanded-content.two-columns{column-count:2;column-gap:30px;column-rule:1px solid #333}tr[hidden]{display:none}
 @media(max-width:1000px){.expanded-content.two-columns{column-count:1}}
 </style>
@@ -35,7 +112,7 @@ pre{font:12px 'IBM Plex Mono',monospace;white-space:pre-wrap;overflow-wrap:anywh
 <label>Model <select id="model"><option value="">All models</option></select></label>
 <label>Case <select id="case"><option value="">All cases</option></select></label>
 <p id="overview"></p>
-<section><h2>Time per run</h2><p class="legend"><span><b class="model"></b>Model calls</span><span><b class="tool"></b>Verification tools</span><span><b class="other"></b>Other work, including company search</span></p><div id="bars"></div></section>
+<section><h2>Time per Run: Individual Calls</h2><div id="timing-legend" class="legend"></div><div id="bars"></div></section>
 <section><h2>Assessment Results</h2><table><thead><tr><th>Model / case</th><th>Status / risk</th><th>Total seconds</th><th>Tokens/s</th><th>Tools / rejections</th><th>Details</th></tr></thead><tbody id="results"></tbody></table></section>
 <script id="data" type="application/json">__DATA__</script>
 <script>
@@ -75,6 +152,32 @@ function displayValue(value) {
     return String(value);
 }
 
+const colors = {
+        content_analysis: '#62a8ff', company_selection: '#49c5d6',
+        tool_selection: '#ab96ff', final_assessment: '#7ee2a8',
+        summary_correction: '#ef91cb', inspect_application_url: '#f1b65b',
+        check_employer_association: '#ff885e', collect_application_page: '#e5df70',
+        get_company_domain_info: '#54d2a3', check_recruiter_email: '#c7a27a',
+        unmeasured: '#888888'
+};
+
+function drawLegend(selected) {
+    const legend = document.getElementById('timing-legend');
+    legend.replaceChildren();
+    const seen = new Set();
+    for (const run of selected) {
+        for (const part of run.timing_parts || []) {
+            if (seen.has(part.name)) continue;
+            seen.add(part.name);
+            const item = addElement('span', undefined, legend);
+            const swatch = addElement('b', undefined, item);
+            swatch.style.background = colors[part.name] || '#d5a5e8';
+            // Repeated calls share one legend entry; the tooltip retains the call number.
+            item.appendChild(document.createTextNode(part.label.replace(/ \d+$/, '').replace(/ \(Includes Company Search\)$/, '')));
+        }
+    }
+}
+
 function drawTiming(run, maximum, container) {
     const row = addElement('div', undefined, container);
     row.className = 'bar-row';
@@ -90,23 +193,13 @@ function drawTiming(run, maximum, container) {
     const bar = addElement('div', undefined, row);
     bar.className = 'bar';
     bar.style.width = (100 * run.seconds / maximum) + '%';
-    const modelTime = Math.min(run.model_seconds, run.seconds);
-    const toolTime = Math.min(run.tool_seconds || 0, run.seconds - modelTime);
-    const otherTime = Math.max(0, run.seconds - modelTime - toolTime);
-    const segments = [
-        {name: 'model', seconds: modelTime},
-        {name: 'tool', seconds: toolTime},
-        {name: 'other', seconds: otherTime}
-    ];
-    for (const part of segments) {
+    for (const part of run.timing_parts || []) {
+        const color = colors[part.name] || '#d5a5e8';
+        const text = part.label + ': ' + part.seconds.toFixed(2) + 's';
         const segment = addElement('span', undefined, bar);
-        segment.className = part.name;
-        let percentage = 0;
-        if (run.seconds > 0) {
-            percentage = 100 * part.seconds / run.seconds;
-        }
-        segment.style.width = percentage + '%';
-        segment.title = part.name + ': ' + part.seconds.toFixed(2) + 's';
+        segment.style.background = color;
+        segment.style.width = (run.seconds > 0 ? 100 * part.seconds / run.seconds : 0) + '%';
+        segment.title = text;
     }
 }
 
@@ -132,6 +225,10 @@ function addResultRow(run, table) {
         statusLabel.className = 'status-completed';
     } else if (run.status === 'failed') {
         statusLabel.className = 'status-failed';
+    } else if (run.status === 'timed_out') {
+        statusLabel.className = 'status-timed-out';
+    } else if (run.status === 'not_run') {
+        statusLabel.className = 'status-not-run';
     }
     const riskLabel = addElement('span', displayValue(run.risk), statusCell);
     riskLabel.className = 'risk';
@@ -145,7 +242,7 @@ function addResultRow(run, table) {
         riskLabel.classList.add('risk-unknown');
     }
     const values = [
-        run.seconds,
+        run.seconds === null ? 'Not run' : run.seconds,
         displayValue(run.tokens_per_second),
         tools + ' / ' + rejections
     ];
@@ -195,6 +292,8 @@ function render() {
     let completed = 0;
     let failed = 0;
     let reused = 0;
+    let timedOut = 0;
+    let notRun = 0;
     let maximum = 1;
     for (const run of runs) {
         if (chosenModel && run.model !== chosenModel) {
@@ -214,15 +313,19 @@ function render() {
         if (run.reused) {
             reused += 1;
         }
+        if (run.status === 'timed_out') timedOut += 1;
+        if (run.status === 'not_run') notRun += 1;
     }
     document.getElementById('overview').textContent = selected.length + ' results | ' +
-        completed + ' completed | ' + failed + ' failed | ' + reused + ' reused';
+        completed + ' completed | ' + failed + ' failed | ' + reused + ' reused' +
+        (timedOut ? ' | ' + timedOut + ' timed out' : '') + (notRun ? ' | ' + notRun + ' not started' : '');
+    drawLegend(selected);
     const bars = document.getElementById('bars');
     const table = document.getElementById('results');
     bars.replaceChildren();
     table.replaceChildren();
     for (const run of selected) {
-        drawTiming(run, maximum, bars);
+        if (typeof run.seconds === 'number') drawTiming(run, maximum, bars);
         addResultRow(run, table);
     }
 }

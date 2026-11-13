@@ -4,7 +4,7 @@ import argparse
 import json
 import re
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from inspect_application_url import domain_for
 
@@ -15,34 +15,55 @@ FREE_PROVIDERS = {"gmail.com", "googlemail.com", "outlook.com", "hotmail.com",
                   "proton.me", "protonmail.com", "mail.com", "gmx.com"}
 
 
+def email_mentions(text):
+    """Find visible addresses and mailto recipients, retaining original positions."""
+    mentions = []
+    mail_links = list(re.finditer(r"mailto:[^\s<>\"()]+", text, re.I))
+    for link in mail_links:
+        destination, _, query = link.group(0)[7:].partition("?")
+        recipients = [unquote(destination)]
+        parameters = parse_qs(query)
+        for field in ("to", "cc", "bcc"):
+            recipients.extend(parameters.get(field, []))
+        for recipient in recipients:
+            for match in EMAIL.finditer(recipient):
+                mentions.append((match.group(1), link.start(), link.end()))
+    # Mail subject/body text is not a recipient; don't scan those URI queries.
+    visible = list(text)
+    for link in mail_links:
+        visible[link.start():link.end()] = " " * (link.end() - link.start())
+    for match in EMAIL.finditer("".join(visible)):
+        mentions.append((match.group(1), match.start(), match.end()))
+    mentions.sort(key=lambda mention: mention[1])
+    return mentions
+
+
 def posting_emails(job):
-    """Keep source snippets, and reject extracted contacts absent from raw evidence."""
+    """Scan all source text and keep original context, including encoded mail links."""
     records = []
     seen = set()
-    raw = job.get("raw_posting_text")
-    text_field = "description" if job.get("description") else "raw_posting_text"
-    for field in ("contact_email", text_field):
+    raw = job.get("raw_posting_text") or ""
+    raw_mentions = {}
+    for address, start, end in email_mentions(raw):
+        raw_mentions.setdefault(address.casefold(), (start, end))
+    for field in ("contact_email", "description", "raw_posting_text"):
         source = job.get(field) or ""
-        for match in EMAIL.finditer(source):
-            address = match.group(1)
-            if raw and address.casefold() not in raw.casefold():
+        for address, start, end in email_mentions(source):
+            key = address.casefold()
+            if raw and key not in raw_mentions:
                 continue
-            if address.casefold() in seen:
+            if key in seen:
                 continue
-            seen.add(address.casefold())
-            # Prefer original surrounding text over an isolated extracted field.
-            original_match = None
-            if raw:
-                original_match = re.search(re.escape(address), raw, re.I)
-            if original_match:
+            seen.add(key)
+            if key in raw_mentions:
+                start, end = raw_mentions[key]
                 quote_source = raw
                 quote_source_field = "raw_posting_text"
             else:
                 quote_source = source
                 quote_source_field = field
-            quote_match = original_match or match
             records.append({"email": address, "source_field": field,
-                            "quote": quote_source[max(0, quote_match.start() - 80):quote_match.end() + 80],
+                            "quote": quote_source[max(0, start - 80):end + 80],
                             "quote_source": quote_source_field,
                             "present_in_raw_posting": bool(raw)})
     return records

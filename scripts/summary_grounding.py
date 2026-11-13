@@ -86,10 +86,17 @@ def factual_summary(facts):
     for quote in facts.get("content_concern_quotes", [])[:3]:
         parts.append("Quoted posting concern: " + quote)
     for item in facts.get("company_domain_observations", []):
-        if item.get("lookup_success"):
+        if item.get("lookup_success") and item.get("domain_created"):
             parts.append(f"The separate company-domain lookup for {item['domain']} returned registration date {item.get('domain_created')} and age {item.get('domain_age_days')} days; this does not verify employer identity.")
         else:
             parts.append("The separate company-domain registration lookup did not return registration evidence.")
+    for result in facts.get("recruiter_email_checks", []):
+        for email in result.get("emails", []):
+            comparison = email.get("comparison")
+            if comparison == "matching_domain":
+                parts.append("Posting email " + email["email"] + " shares the candidate company domain; domain consistency is supported, not recruiter identity.")
+            elif comparison in ("different_domain", "free_provider"):
+                parts.append("Posting email " + email["email"] + " uses a different domain or free provider; this is not proof of fraud or affiliation.")
     for item in facts["url_observations"]:
         parts.append(f"URL inspection observed {item['observed_http_redirect_count']} HTTP redirects and a destination on {item['final_domain']} (HTTP {item['http_status']}).")
     for page in facts.get("application_page_observations", []):

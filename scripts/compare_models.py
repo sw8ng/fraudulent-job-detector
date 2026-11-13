@@ -7,8 +7,7 @@ import time
 from pathlib import Path
 
 from ollama import Client
-from assess_job import assess_job
-from model_client import MeasuredClient
+from bounded_assessment import run_bounded_assessment
 from performance_view import write_dashboard
 from saved_results import posting_fingerprint, read_report
 
@@ -53,7 +52,7 @@ def find_saved_run(previous, case, model, repetition, folder):
     for row in reversed(previous.get("runs", [])):
         if row.get("model") != model or row.get("repetition") != repetition:
             continue
-        if row.get("status") != "completed":
+        if row.get("status") not in ("completed", "timed_out"):
             continue
         if row.get("source"):
             if row["source"] != case["source"]:
@@ -117,10 +116,9 @@ def add_report_metrics(row, report):
     row["summary_review"] = investigation["summary_review"]["status"]
 
 
-def run_case(case, model, repetition, folder, index):
+def run_case(case, model, repetition, folder, index, max_seconds=300):
     """Run one missing assessment. A failed run is saved as a failure, never as reusable work."""
-    host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-    client = MeasuredClient(Client(host=host, timeout=300))
+    calls = []
     row = {
         "case": case["name"], "kind": case["kind"], "source": case["source"],
         "model": model, "repetition": repetition, "status": "failed", "reused": False,
@@ -128,7 +126,9 @@ def run_case(case, model, repetition, folder, index):
     }
     started = time.perf_counter()
     try:
-        report = assess_job(case["job"], model=model, client=client, include_trace=True)
+        report = run_bounded_assessment(case["job"], model=model, max_seconds=max_seconds)
+        performance = report["investigation"].get("performance", {})
+        calls = performance.get("model_calls", [])
         # Keep old report files even when --force requests a fresh measurement.
         filename = f"report-{index:03d}.json"
         while (folder / filename).exists():
@@ -137,21 +137,24 @@ def run_case(case, model, repetition, folder, index):
         (folder / filename).write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
         row["report"] = filename
         add_report_metrics(row, report)
-        row["status"] = "completed"
+        row["status"] = report.get("execution_status", "completed")
+        if row["status"] != "completed":
+            row["error"] = report.get("stop_reason", "Assessment stopped before completion")
+            row["timing_incomplete"] = True
     except Exception as error:
         row["error"] = type(error).__name__ + ": " + str(error)
     row["seconds"] = round(time.perf_counter() - started, 3)
-    row["model_calls"] = client.calls
+    row["model_calls"] = calls
     row["model_seconds"] = 0
     row["output_tokens"] = 0
     generation_seconds = 0
-    for call in client.calls:
+    for call in calls:
         row["model_seconds"] += call["seconds"]
         row["output_tokens"] += call.get("eval_count", 0)
         generation_seconds += call.get("eval_duration", 0) / 1e9
     row["model_seconds"] = round(row["model_seconds"], 3)
     row["tokens_per_second"] = None
-    if generation_seconds > 0:
+    if generation_seconds > 0 and not row.get("timing_incomplete"):
         row["tokens_per_second"] = round(row["output_tokens"] / generation_seconds, 2)
     return row
 
@@ -174,9 +177,14 @@ def main():
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--output", type=Path, required=True, help="Results folder; matching completed results are reused")
     parser.add_argument("--force", action="store_true", help="Run fresh assessments instead of reusing completed ones")
+    parser.add_argument("--max-seconds", type=float, default=300, help="Hard limit per assessment (default: 300 seconds)")
+    parser.add_argument("--max-total-seconds", type=float, default=600, help="Stop starting work after this batch budget (default: 600 seconds)")
     args = parser.parse_args()
     if args.repeats < 1:
         parser.error("--repeats must be positive")
+    if args.max_seconds <= 0 or args.max_total_seconds <= 0:
+        parser.error("Time limits must be positive")
+    batch_started = time.perf_counter()
     seen_models = []
     for model in args.models:
         if model in seen_models:
@@ -219,7 +227,7 @@ def main():
 
     if pending_models:
         host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-        available = Client(host=host).list()
+        available = Client(host=host, timeout=10).list()
         installed = []
         for item in available.models:
             installed.append(item.model)
@@ -244,6 +252,7 @@ def main():
         "models": args.models, "repeats": args.repeats, "mode": "live_or_saved",
         "note": "Only supplied postings are included. Saved results retain their original timings; they are not fresh speed measurements. Use --force for fresh evidence, changed prompts/settings or a new timing experiment. Loading and network conditions affect live timings. No real-posting authenticity labels.",
         "cases": cases, "runs": [],
+        "limits": {"assessment_seconds": args.max_seconds, "batch_seconds": args.max_total_seconds},
     }
     index = 0
     for planned_run in plan:
@@ -256,9 +265,17 @@ def main():
             print(f"Skipping {model}: {case['name']} ({repetition}) — saved result", flush=True)
             row = saved
         else:
-            print(f"Running {model}: {case['name']} ({repetition})", flush=True)
-            row = run_case(case, model, repetition, args.output, index)
-            print(f"  {row['status']} in {row['seconds']}s", flush=True)
+            remaining = args.max_total_seconds - (time.perf_counter() - batch_started)
+            if remaining < args.max_seconds:
+                row = {"case": case["name"], "source": case["source"], "kind": case["kind"],
+                       "model": model, "repetition": repetition, "status": "not_run", "reused": False,
+                       "seconds": None, "model_seconds": None, "model_calls": [],
+                       "error": "Insufficient batch time for the full assessment allowance; this case was not started"}
+                print(f"Not started: {model}: {case['name']} (full assessment allowance would exceed batch limit)", flush=True)
+            else:
+                print(f"Running {model}: {case['name']} ({repetition})", flush=True)
+                row = run_case(case, model, repetition, args.output, index, max_seconds=args.max_seconds)
+                print(f"  {row['status']} in {row['seconds']}s", flush=True)
         experiment["runs"].append(row)
         save_experiment(experiment, args.output)
     print(f"Open {args.output / 'comparison.html'}", flush=True)

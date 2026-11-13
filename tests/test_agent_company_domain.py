@@ -33,7 +33,7 @@ class CompanyDomainTests(unittest.TestCase):
         self.assertIn("error", trace[0]["evidence"])
         self.assertIn("error", trace[2]["evidence"])
         self.assertEqual(trace[1]["evidence"]["scope"], "candidate_company_website_registration")
-        self.assertEqual(report["claim_checks"]["company_website"]["status"], "unresolved")
+        self.assertEqual(report["claim_checks"]["company_domain_registration"]["status"], "supported")
         self.assertTrue(any(e["type"] == "company_domain_registration" for e in report["evidence_sources"]))
         self.assertIn('"company_domain_observations"', client.chat.call_args.kwargs["messages"][-1]["content"])
         self.assertIn('"domain_age_days": 2000', client.chat.call_args.kwargs["messages"][-1]["content"])
@@ -53,5 +53,5 @@ class CompanyDomainTests(unittest.TestCase):
         client.chat.side_effect = [selection(("get_company_domain_info", {})), final()]
         with patch("assess_job.get_domain_info", return_value={"domain": "company.com", "lookup_success": False, "errors": [{"message": "timeout"}]}):
             report = assess_job({"company_website": "https://company.com"}, client=client, include_trace=True, model="test-model")
-        self.assertEqual(report["claim_checks"]["company_website"]["status"], "unresolved")
-        self.assertIn("lookup failure is not fraud", report["claim_checks"]["company_website"]["reason"])
+        self.assertEqual(report["claim_checks"]["company_domain_registration"]["status"], "unresolved")
+        self.assertIn("lookup failure is not fraud", report["claim_checks"]["company_domain_registration"]["reason"])

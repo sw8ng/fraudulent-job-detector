@@ -11,11 +11,16 @@ class MeasuredClient:
         self.client = client
         self.calls = []
         self.stage = "unspecified"
+        self.on_progress = None
 
     def chat(self, **kwargs):
         started = time.perf_counter()
         record = {"stage": self.stage, "model": kwargs["model"],
-                  "options": kwargs.get("options", {}), "status": "failed"}
+                  "options": kwargs.get("options", {}), "status": "running",
+                  "started_at": time.time(), "seconds": 0}
+        self.calls.append(record)
+        if self.on_progress:
+            self.on_progress()
         try:
             response = self.client.chat(**kwargs)
             record["status"] = "completed"
@@ -40,8 +45,10 @@ class MeasuredClient:
             record["done_reason"] = getattr(response, "done_reason", None)
             return response
         except Exception as error:
+            record["status"] = "failed"
             record["error"] = type(error).__name__ + ": " + str(error)
             raise
         finally:
             record["seconds"] = round(time.perf_counter() - started, 4)
-            self.calls.append(record)
+            if self.on_progress:
+                self.on_progress()

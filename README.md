@@ -11,12 +11,30 @@ the project's design decisions, testing, limitations, and final results.
 
 Content analysis uses examples to distinguish employer-paid compensation from
 applicant payment demands. Tool selection highlights unanswered checks and allows
-up to two rounds, including a follow-up after an early prose answer. Tools remain
+two initial rounds and one additional opportunity when a successful application
+destination still has pending content or association checks. Tools remain
 optional; missing employer authentication is reported separately from posting risk.
 
 The project uses BeautifulSoup and a selected local model through Ollama to turn saved job posting HTML into structured JSON.
 
 ## Quick workflow commands
+
+Assessments now have a hard **300-second limit**. Comparisons have a **600-second
+batch budget**. On expiry, the assessment worker is terminated, completed evidence
+is saved in a partial report, and unfinished work is labeled `timed_out` or `not_run`.
+No extra model call is made to invent a final answer. Timed-out comparisons are
+retained on resume; use `--force` only when you intentionally want to retry them.
+Every selected model uses the same limits. A comparison starts a case only when
+the full per-assessment allowance remains in the batch budget; otherwise it marks
+the case `not_run` rather than shortening its deadline. Set `--max-seconds` and `--max-total-seconds` on
+comparison or pipeline commands to change the budgets; single assessments accept
+`--max-seconds`. The pipeline also limits extraction and keeps completed outputs.
+
+Tool selection and final assessment omit long URL queries from model-visible text while
+keeping exact source URLs for tool execution and final evidence. All advertised
+verification tools use stored posting values, so the model can request them with
+empty arguments. Final summaries are prompted to use 2-4 sentences and at most
+90 words. These shared rules apply to any model selected with `--model`.
 
 Application-page collection reuses the HTML text cleanup used for saved postings.
 After URL Inspection records a successful destination, Qwen or Llama may request
@@ -31,7 +49,8 @@ python scripts/collect_application_page.py "https://stripe.com/careers/listing/s
 ```
 
 Page evidence is saved in assessment `evidence_sources` and `investigation.tool_calls`.
-Collection is optional within the existing two tool-selection rounds. This version
+Collection is optional within this bounded selection workflow. URL Inspection uses
+the posting's exact URL without requiring the model to retype it. This version
 reads public HTML only; it does not execute JavaScript, click Apply, log in or decode
 job-board redirect wrappers. No Indeed-specific handling is integrated. HTTP errors
 and missing text are limitations, not fraud evidence. Even successful collection
@@ -144,8 +163,9 @@ This supports association with a candidate site, not employer identity verificat
 Pages requiring JavaScript may not be checkable, and location spelling differences
 can prevent a match. The selected model selects this tool when association evidence is useful
 and a company website and job title are available. Skipped checks are saved as
-`not_requested`. The selected model can choose URL inspection, company-domain investigation, association and email comparison across two
-selection rounds, with each tool executing at most once. Tool requests and
+`not_requested`. The selected model can choose useful checks across two initial
+selection rounds, with a third opportunity only for pending application checks
+after a successful destination. Each tool executes at most once. Tool requests and
 returned evidence are saved in `tool_calls`. Careers links in page navigation
 and footers are preserved, and links matching the job title take priority.
 Known tracking variants are grouped, and resolved pages are checked once.
@@ -207,8 +227,15 @@ The saved result starts with `assessment` (`risk_level` and `summary`),
 `claim_checks`, `key_findings`, `unresolved`, `not_checked`, `evidence_sources`, and
 `recommended_action`. Claim checks include a status, reason, and evidence IDs.
 An unperformed check is `not_checked`; an attempted but inconclusive check is
-`unresolved`. A supported job/domain match does not verify employer identity,
-and a different application domain alone is not treated as a contradiction.
+`unresolved`. Successful checks are `supported` for their specific claims:
+email-domain consistency, recorded company-domain registration, collected application
+text, job matches, or destination association. `different_domain` records a completed
+comparison with differing domains; it is not automatically fraud evidence.
+Company/recruiter identity and website ownership are described under `verification_limits`,
+not as checks these tools promise to complete. `candidate_company_website` identifies
+the supplied or selected site. The previous broad company/recruiter claim fields have
+been replaced with these narrower checks. Existing saved reports keep their original
+format; use `--force` when intentionally rerunning an assessment.
 The `unresolved` list contains only inconclusive checks; `not_checked` lists
 unperformed checks separately. Neither list implies suspicious evidence.
 
@@ -335,15 +362,17 @@ python scripts/check_recruiter_email.py "data/output/your-posting.json" --compan
 ```
 
 Full assessments use the existing `scripts/assess_job.py` command. Email checks
-are optional, may run once, and share the existing two tool-selection rounds
+are optional, may run once, and share the bounded tool-selection workflow
 with URL inspection, company-domain investigation and employer association. Reports retain the comparisons
-as evidence; recruiter affiliation remains unresolved after comparison.
+as evidence. Matching addresses support `email_domain_consistency`; different
+or free-provider domains are reported as differences when a company comparison
+is available. Identity authentication remains a separate capability limit.
 A matching domain does not establish recruiter identity or mailbox ownership.
 Different domains can belong to staffing agencies, and a free email provider
 alone does not establish fraud. Addresses may also be administrative contacts.
 
 Company-domain checks accept only the selected company website, may execute once,
-and share the existing two selection rounds. Rejected or unresolved company
+and share the bounded selection workflow. Rejected or unresolved company
 candidates cannot be investigated through this tool. Registration lookup failures
 remain limitations. Careers evidence records per-URL HTTP status so errors on
 `/careers`, `/jobs` or an application endpoint are distinguished from a successfully
@@ -435,3 +464,9 @@ HTML so the page works offline.
 
 Click **Inspect** to expand an assessment across the full table width. Long
 content flows into two columns on wide screens and one column on smaller screens.
+
+The timing chart uses one shared legend for individual model stages and verification tools. Measured calls follow execution rounds, placing requested tools before final assessment. Unmeasured time is labeled separately because its position was not recorded. Hover over a segment to see its call name and measured seconds. Unmeasured work remains separate; saved company-search time is not estimated.
+
+Email comparison scans the extracted contact, description and full original posting text, including encoded recipients in embedded `mailto:` links. It retains source context and only offers the tool when an address is found. Email subjects and message bodies are not treated as recipients.
+
+Employer Association records discovered careers/job links with their source page. An exact observed application destination linked through that path can support destination association, including external hiring platforms. Merely sharing the hiring platform domain or returning HTTP 200 is insufficient.

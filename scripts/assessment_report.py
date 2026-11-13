@@ -1,4 +1,17 @@
-"""Build a readable assessment from recorded evidence, without inventing checks."""
+"""Build scoped claim results from actual tool evidence."""
+
+from check_employer_association import page_key
+
+
+def same_page(left, right):
+    """Compare exact job pages, ignoring only the existing tracking-key rules."""
+    if not left or not right:
+        return False
+    try:
+        return page_key(left) == page_key(right)
+    except ValueError:
+        return False
+
 
 
 def build_report(job, assessment, investigation):
@@ -15,19 +28,16 @@ def build_report(job, assessment, investigation):
     evidence("posting-1", "supplied_posting", {
         key: job.get(key) for key in ("source_file", "company", "job_title", "location", "company_website", "application_url")}, job.get("source_url"))
     checks = {
-        "company_identity": claim("not_checked", "No independent company identity verification tool has run."),
-        "company_website": claim("not_checked", "No company website was supplied or selected."),
+        "company_domain_registration": claim("not_checked", "Company-domain registration was not checked."),
+        "application_page_content": claim("not_checked", "Application-page collection was not executed."),
+        "application_destination_association": claim("not_checked", "No destination association check was executed."),
         "job_on_company_careers_page": claim("not_checked", "Employer association was not executed."),
-        "recruiter_affiliation": claim("not_checked", "No recruiter email-domain check or independent affiliation verification ran."),
+        "email_domain_consistency": claim("not_checked", "No posting email-domain comparison ran."),
         "application_domain": claim("not_checked", "No successful application URL trace was recorded."),
     }
     lookup = investigation.get("company_lookup")
     if lookup:
         evidence("company-search-1", "company_discovery", lookup)
-        checks["company_website"] = claim("unresolved", "Search candidates do not independently verify the employer's website.", ["company-search-1"])
-    if investigation.get("company_website_used"):
-        checks["company_website"] = claim("unresolved", "A supplied or selected candidate website is available, but its ownership/association with the claimed employer is unverified.",
-            ["company-search-1"] if lookup else ["posting-1"])
     content = investigation.get("content_analysis") or {}
     for index, observation in enumerate(content.get("observations", []), 1):
         identifier = evidence(f"content-{index}", "quoted_content_observation", observation)
@@ -45,28 +55,38 @@ def build_report(job, assessment, investigation):
     for index, call in enumerate(investigation.get("tool_calls", []), 1):
         if call.get("tool") == "collect_application_page":
             result = call.get("evidence", {})
-            evidence(f"application-page-{index}", "application_page_content", result, result.get("final_url"))
+            identifier = evidence(f"application-page-{index}", "application_page_content", result, result.get("final_url"))
+            if result.get("extraction_success") and result.get("text", "").strip():
+                checks["application_page_content"] = claim("supported", "HTML text was collected from the recorded application destination. This confirms readable content, not a full job description or application form.", [identifier])
+            elif checks["application_page_content"]["status"] != "supported":
+                checks["application_page_content"] = claim("not_checked" if result.get("error") else "unresolved", "No readable destination text was collected; access failure does not establish fraud.", [identifier])
             continue
         if call.get("tool") == "get_company_domain_info":
             result = call.get("evidence", {})
             identifier = evidence(f"company-domain-{index}", "company_domain_registration", result, result.get("rdap_source_url"))
-            if not result.get("error"):
-                checks["company_website"]["evidence_ids"].append(identifier)
-                checks["company_website"]["reason"] += " A separate candidate company-domain registration lookup " + ("returned registry evidence; domain age does not verify employer identity." if result.get("lookup_success") else "did not establish registration details; lookup failure is not fraud evidence.")
+            if result.get("lookup_success") and result.get("domain_created"):
+                checks["company_domain_registration"] = claim("supported", "Registry evidence returned a registration date for " + str(result.get("domain")) + ": " + str(result["domain_created"]) + ". This is domain history, not the company's founding date or identity verification.", [identifier])
+            elif checks["company_domain_registration"]["status"] != "supported":
+                checks["company_domain_registration"] = claim("not_checked" if result.get("error") else "unresolved", "Registration date was not established; lookup failure is not fraud evidence.", [identifier])
             continue
         if call.get("tool") == "check_recruiter_email":
             result = call.get("evidence", {})
             identifier = evidence(f"email-{index}", "recruiter_email_comparison", result)
             if result.get("status") == "checked" and result.get("emails"):
-                reason = ("Posting email domains were inspected, but no valid candidate company domain was available for comparison. Recruiter affiliation remains unverified."
-                          if not result.get("company_domain") else
-                          "Posting email domains were inspected against an unverified candidate website where possible. Neither matching, different nor free-provider domains establish recruiter affiliation or fraud; consult the email evidence and contact context.")
-                checks["recruiter_affiliation"] = claim("unresolved", reason, [identifier])
+                comparisons = [email.get("comparison") for email in result["emails"]]
+                if all(value == "matching_domain" for value in comparisons):
+                    checks["email_domain_consistency"] = claim("supported", "All detected email mentions share the candidate company website's registrable domain. This supports domain consistency, not the sender's identity or recruiter affiliation.", [identifier])
+                elif any(value in ("different_domain", "free_provider") for value in comparisons):
+                    checks["email_domain_consistency"] = claim("different_domain" if result.get("company_domain") else "unresolved", "At least one email uses a different domain or free provider. Review each address and its source context; agency and administrative contacts may be legitimate.", [identifier])
+                else:
+                    checks["email_domain_consistency"] = claim("unresolved", "No valid candidate company domain or email domain was available for comparison.", [identifier])
             continue
         if call.get("tool") != "inspect_application_url":
             continue
         result = call.get("evidence", {})
         identifier = evidence(f"url-{index}", "url_inspection", result, result.get("final_url"))
+        if result.get("error") and checks["application_domain"]["status"] != "not_checked":
+            continue
         if result.get("error"):
             checks["application_domain"] = claim("not_checked", "The URL tool request was rejected; no destination check executed for this request.", [identifier])
         elif not result.get("redirect_lookup_success"):
@@ -74,8 +94,31 @@ def build_report(job, assessment, investigation):
         elif result.get("domain_matches_company") is True:
             checks["application_domain"] = claim("supported", "The observed destination shares the candidate company website's registrable domain; this does not verify identity or page content.", [identifier])
             findings["supporting"].append({"finding": checks["application_domain"]["reason"], "evidence_ids": [identifier]})
+        elif result.get("domain_matches_company") is False:
+            checks["application_domain"] = claim("different_domain", "The observed destination and candidate company website have different registrable domains. This is a completed domain comparison; an external hiring platform may still be associated with the company.", [identifier])
         else:
-            checks["application_domain"] = claim("unresolved", "The destination's association with the employer is unknown. A different domain may be a legitimate hiring platform, not a proven contradiction.", [identifier])
+            checks["application_domain"] = claim("unresolved", "The destination was observed, but no valid candidate company domain was available for comparison.", [identifier])
+    for index, call in enumerate(investigation.get("tool_calls", []), 1):
+        if call.get("tool") != "inspect_application_url":
+            continue
+        result = call.get("evidence", {})
+        if result.get("error") or not result.get("redirect_lookup_success"):
+            continue
+        identifier = f"url-{index}"
+        destination = result.get("final_url")
+        if result.get("domain_matches_company") is True:
+            checks["application_destination_association"] = claim("supported", "The observed destination shares the candidate company domain. This supports association with that candidate, not independent employer identity.", [identifier])
+            break
+        linked = any(same_page(link.get("to_url"), destination) for link in association.get("discovered_links", []))
+        matched = any(same_page(match.get("url"), destination) for match in association.get("matches", []))
+        if association.get("status") not in (None, "not_requested") and (linked or matched):
+            checks["application_destination_association"] = claim("supported", "The exact application destination was linked or matched through the candidate company's inspected careers path, including an external hiring platform.", [identifier, "association-1"])
+            break
+        checks["application_destination_association"] = claim("unresolved", "No recorded company careers link or matching job connects this exact external destination to the candidate company. A different domain alone is not fraud evidence.", [identifier])
+    for name in ("company_domain_registration", "application_page_content", "email_domain_consistency", "application_destination_association"):
+        check = checks[name]
+        if check["status"] == "supported":
+            findings["supporting"].append({"finding": check["reason"], "evidence_ids": check["evidence_ids"]})
     unresolved = [{"claim": name, "status": check["status"], "reason": check["reason"], "evidence_ids": check["evidence_ids"]}
                   for name, check in checks.items() if check["status"] == "unresolved"]
     not_checked = [{"claim": name, "status": check["status"], "reason": check["reason"], "evidence_ids": check["evidence_ids"]}
@@ -85,7 +128,10 @@ def build_report(job, assessment, investigation):
               "Confirm the posting and application destination through an independently established employer channel before sharing sensitive information. This assessment does not verify legitimacy.")
     report = {"assessment": {"risk_level": assessment["risk_level"], "summary": assessment["explanation"]},
               "claim_checks": checks, "key_findings": findings, "unresolved": unresolved, "not_checked": not_checked,
-              "evidence_sources": sources, "recommended_action": action, "investigation": investigation}
+              "evidence_sources": sources, "recommended_action": action,
+              "candidate_company_website": investigation.get("company_website_used"),
+              "verification_limits": ["Company identity, website ownership and recruiter identity are not independently authenticated by these tools. Supported results apply only to the specific claims above."],
+              "investigation": investigation}
     validate_evidence_references(report)
     return report
 
