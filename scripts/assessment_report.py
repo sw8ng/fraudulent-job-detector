@@ -1,6 +1,8 @@
 """Build scoped claim results from actual tool evidence."""
 
 from check_employer_association import page_key
+from job_evidence import page_details, posting_identifiers
+from access_policy import neutral_access
 
 
 def same_page(left, right):
@@ -32,7 +34,6 @@ def build_report(job, assessment, investigation):
         "application_page_content": claim("not_checked", "Application-page collection was not executed."),
         "application_destination_association": claim("not_checked", "No destination association check was executed."),
         "job_on_company_careers_page": claim("not_checked", "Employer association was not executed."),
-        "email_domain_consistency": claim("not_checked", "No posting email-domain comparison ran."),
         "application_domain": claim("not_checked", "No successful application URL trace was recorded."),
     }
     lookup = investigation.get("company_lookup")
@@ -69,22 +70,13 @@ def build_report(job, assessment, investigation):
             elif checks["company_domain_registration"]["status"] != "supported":
                 checks["company_domain_registration"] = claim("not_checked" if result.get("error") else "unresolved", "Registration date was not established; lookup failure is not fraud evidence.", [identifier])
             continue
-        if call.get("tool") == "check_recruiter_email":
-            result = call.get("evidence", {})
-            identifier = evidence(f"email-{index}", "recruiter_email_comparison", result)
-            if result.get("status") == "checked" and result.get("emails"):
-                comparisons = [email.get("comparison") for email in result["emails"]]
-                if all(value == "matching_domain" for value in comparisons):
-                    checks["email_domain_consistency"] = claim("supported", "All detected email mentions share the candidate company website's registrable domain. This supports domain consistency, not the sender's identity or recruiter affiliation.", [identifier])
-                elif any(value in ("different_domain", "free_provider") for value in comparisons):
-                    checks["email_domain_consistency"] = claim("different_domain" if result.get("company_domain") else "unresolved", "At least one email uses a different domain or free provider. Review each address and its source context; agency and administrative contacts may be legitimate.", [identifier])
-                else:
-                    checks["email_domain_consistency"] = claim("unresolved", "No valid candidate company domain or email domain was available for comparison.", [identifier])
-            continue
         if call.get("tool") != "inspect_application_url":
             continue
         result = call.get("evidence", {})
         identifier = evidence(f"url-{index}", "url_inspection", result, result.get("final_url"))
+        if neutral_access(result):
+            checks["application_domain"] = claim("not_checked", "Source access unavailable; excluded from risk assessment.", [identifier])
+            continue
         if result.get("error") and checks["application_domain"]["status"] != "not_checked":
             continue
         if result.get("error"):
@@ -102,7 +94,7 @@ def build_report(job, assessment, investigation):
         if call.get("tool") != "inspect_application_url":
             continue
         result = call.get("evidence", {})
-        if result.get("error") or not result.get("redirect_lookup_success"):
+        if neutral_access(result) or result.get("error") or not result.get("redirect_lookup_success"):
             continue
         identifier = f"url-{index}"
         destination = result.get("final_url")
@@ -115,7 +107,7 @@ def build_report(job, assessment, investigation):
             checks["application_destination_association"] = claim("supported", "The exact application destination was linked or matched through the candidate company's inspected careers path, including an external hiring platform.", [identifier, "association-1"])
             break
         checks["application_destination_association"] = claim("unresolved", "No recorded company careers link or matching job connects this exact external destination to the candidate company. A different domain alone is not fraud evidence.", [identifier])
-    for name in ("company_domain_registration", "application_page_content", "email_domain_consistency", "application_destination_association"):
+    for name in ("company_domain_registration", "application_page_content", "application_destination_association"):
         check = checks[name]
         if check["status"] == "supported":
             findings["supporting"].append({"finding": check["reason"], "evidence_ids": check["evidence_ids"]})
@@ -130,10 +122,50 @@ def build_report(job, assessment, investigation):
               "claim_checks": checks, "key_findings": findings, "unresolved": unresolved, "not_checked": not_checked,
               "evidence_sources": sources, "recommended_action": action,
               "candidate_company_website": investigation.get("company_website_used"),
+              "job_identifiers": posting_identifiers(job),
               "verification_limits": ["Company identity, website ownership and recruiter identity are not independently authenticated by these tools. Supported results apply only to the specific claims above."],
               "investigation": investigation}
     validate_evidence_references(report)
+    if (investigation.get("summary_review") or {}).get("status") == "factual_fallback":
+        report["findings_status"] = "unavailable_after_factual_fallback"
+    if "findings" in assessment:
+        # Preserve model output for evaluation; never add tags from tool results.
+        report["assessment"]["findings"] = assessment["findings"]
+        report["assessment_schema_version"] = 2
+    report['conclusion'] = evidence_conclusion(job, report)
+    if report['conclusion']['availability']['status'] in ('closed', 'expired') and not findings['suspicious']:
+        report['recommended_action'] = "The recorded posting is closed or expired. Look for a current opening through the employer's careers channel; closure alone does not establish fraud."
+    validate_evidence_references(report)
     return report
+
+
+def evidence_conclusion(job, report):
+    """Report useful match/availability facts independently of the model risk label."""
+    availability = {'status': 'unknown', 'reason': 'Available evidence does not establish posting availability.', 'evidence_ids': []}
+    match = {'status': 'not_established', 'reason': 'A matching employer-linked posting was not established.', 'evidence_ids': []}
+    for source in report['evidence_sources']:
+        if source['type'] != 'application_page_content':
+            continue
+        details = page_details(source['evidence'], job)
+        if details['availability'] in ('closed', 'expired'):
+            availability = {'status': details['availability'], 'reason': details['availability_quote'], 'evidence_ids': [source['id']]}
+        elif details['content_kind'] in ('javascript_shell', 'login_shell') and availability['status'] == 'unknown':
+            availability['reason'] = 'Only a JavaScript/login shell was read; job availability is unknown.'
+            availability['evidence_ids'] = [source['id']]
+        if details['job_match']:
+            linked = report['claim_checks']['application_destination_association']['status'] == 'supported'
+            match = {'status': 'employer_linked_match' if linked else 'matching_destination_page',
+                     'reason': 'Destination job title, location and job content match the supplied posting; independent identity is not authenticated.',
+                     'evidence_ids': [source['id']], 'identifier_check': details['identifier_check']}
+            if availability['status'] == 'unknown':
+                availability = {'status': 'listing_observed', 'reason': 'Matching job content was observed; acceptance of applications is not independently confirmed.', 'evidence_ids': [source['id']]}
+    for source in report['evidence_sources']:
+        if source['type'] == 'employer_association' and source['evidence'].get('status') == 'matching_posting_found' and source['evidence'].get('matches'):
+            match = {'status': 'employer_linked_match',
+                     'identifier_checks': [item.get('identifier_check') for item in source['evidence']['matches'] if item.get('identifier_check')], 'reason': 'A matching title/location was found within the candidate company or its linked careers path; identity remains unverified.', 'evidence_ids': [source['id']]}
+    return {'posting_match': match, 'availability': availability,
+            'risk': {'status': report['assessment']['risk_level'], 'reason': report['assessment']['summary']},
+            'identity_authenticated': False}
 
 
 def validate_evidence_references(report):
@@ -141,6 +173,9 @@ def validate_evidence_references(report):
     if len(ids) != len(report["evidence_sources"]):
         raise ValueError("Duplicate evidence source IDs")
     entries = list(report["claim_checks"].values()) + report["unresolved"] + report.get("not_checked", [])
+    entries += report.get("assessment", {}).get("findings", [])
+    conclusion = report.get('conclusion') or {}
+    entries += [conclusion[key] for key in ('availability', 'posting_match') if key in conclusion]
     entries += report["key_findings"]["suspicious"] + report["key_findings"]["supporting"]
     for entry in entries:
         if any(identifier not in ids for identifier in entry["evidence_ids"]):

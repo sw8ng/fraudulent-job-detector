@@ -36,7 +36,7 @@ def partial_report(job, model, progress, elapsed, status, reason):
     return report
 
 
-def run_bounded_assessment(job, *, model, max_seconds=300):
+def run_bounded_assessment(job, *, model, max_seconds=300, saved_investigation=None):
     """Terminate only this worker on expiry, never the shared Ollama server."""
     if max_seconds <= 0:
         raise ValueError("max_seconds must be positive")
@@ -50,6 +50,15 @@ def run_bounded_assessment(job, *, model, max_seconds=300):
         command = [sys.executable, str(Path(__file__).with_name("assess_job.py")), str(input_file),
                    "--model", model, "--output", str(output_file), "--worker",
                    "--progress-file", str(progress_file)]
+        if saved_investigation is not None:
+            evidence_file = folder / 'evidence.json'
+            evidence_file.write_text(json.dumps(saved_investigation, ensure_ascii=False), encoding='utf-8')
+            seed = dict(saved_investigation)
+            seed['evidence_reuse'] = {'source_performance': seed.get('performance', {}),
+                                      'scope': 'Saved evidence; final generation only'}
+            seed['performance'] = {'model_calls': []}
+            progress_file.write_text(json.dumps(seed, ensure_ascii=False), encoding='utf-8')
+            command.extend(['--evidence-file', str(evidence_file)])
         status = "failed"
         reason = "Assessment worker stopped before completion."
         try:

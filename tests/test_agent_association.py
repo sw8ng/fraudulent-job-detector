@@ -33,7 +33,7 @@ class AgentAssociationTests(unittest.TestCase):
         checker.assert_called_once_with(**self.arguments)
         self.assertEqual(result["investigation"]["employer_association"], evidence)
         self.assertEqual(result["investigation"]["tool_calls"][0]["tool"], "check_employer_association")
-        self.assertTrue(any(isinstance(m, dict) and m.get("role") == "tool" for m in client.chat.call_args.kwargs["messages"]))
+        self.assertIn("employer_association", client.chat.call_args.kwargs["messages"][-1]["content"])
 
     def test_agent_may_skip_association(self):
         client = Mock()

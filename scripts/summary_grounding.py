@@ -2,6 +2,7 @@
 
 import re
 from check_employer_association import page_key
+from job_evidence import page_details
 
 
 def observed_facts(investigation):
@@ -34,14 +35,19 @@ def observed_facts(investigation):
             "company_website_is_unverified": True,
             "company_website_used": investigation.get("company_website_used"),
             "association_status": association.get("status", "not_requested"),
-            "recruiter_email_checks": [call["evidence"] for call in investigation.get("tool_calls", [])
-                                       if call.get("tool") == "check_recruiter_email" and not call.get("evidence", {}).get("error")],
             "association_pages_checked": [p["url"] for p in association.get("pages_checked", [])],
             "association_matches": association.get("matches", [])}
 
 
 def summary_issues(summary, facts):
     issues = []
+    if facts.get('company_website_is_unverified', True):
+        pattern = r'\blegitimate\s+(?:company|employer)\b|\b(?:company|employer|posting|job)\s+is\s+(?:verified|authentic|legitimate)\b'
+        for match in re.finditer(pattern, summary, re.I):
+            preceding = summary[max(0, match.start() - 60):match.start()]
+            if not re.search(r'\b(?:no|not|never|cannot|without|whether|unclear|unknown|if)\b[^.!?]*$', preceding, re.I):
+                issues.append('The recorded checks do not independently authenticate the employer or posting.')
+                break
     if any(200 <= code < 300 for code in facts.get("company_website_http_statuses", [])):
         pattern = r"\b(?:company\s+(?:website|site|homepage)|homepage)\b([^.!?;]{0,120})\b(?:404|unavailable|inaccessible)\b([^.!?;]{0,80})"
         if any(not re.search(r"\bcareers?\b|/jobs|\bpaths\b|\bapplication\b", match.group(1) + match.group(2), re.I)
@@ -49,8 +55,11 @@ def summary_issues(summary, facts):
             issues.append("The candidate company webpage was successfully read; errors on application or careers paths must not be attributed to that webpage.")
     if facts.get("association_status") in (None, "not_requested") and re.search(r"\bno\b[^.!?]{0,80}\b(?:job listing|matching (?:job|posting))\b[^.!?]{0,30}\bfound\b", summary, re.I):
         issues.append("No employer-association check ran; do not describe an unperformed search as a missing job match.")
-    if re.search(r"\bdefinitive\b[^.!?]{0,40}\b(?:fraud|scam)\b", summary, re.I):
-        issues.append("Describe observed requests and assessed risk without claiming definitive proof of fraud.")
+    for match in re.finditer(r"\bdefinitive\b[^.!?]{0,40}\b(?:fraud|scam)\b", summary, re.I):
+        preceding = summary[max(0, match.start() - 40):match.start()]
+        if not re.search(r"\b(?:no|not|without|absence of|lack of)\b[^.!?]*$", preceding, re.I):
+            issues.append("Describe observed requests and assessed risk without claiming definitive proof of fraud.")
+            break
     urls = facts["url_observations"]
     for registry in facts.get("company_domain_observations", []):
         date = registry.get("domain_created")
@@ -74,15 +83,31 @@ def summary_issues(summary, facts):
                 break
     for match in re.finditer(r"\b(?:official|verified|legitimate|trusted|authentic)\s+(?:company\s+)?(?:site|website|domain)\b", summary, re.I):
         preceding = summary[max(0, match.start() - 50):match.start()]
-        if not re.search(r"\b(?:no|not|never|without|unverified)\b[^.!?]*$", preceding, re.I):
+        if not re.search(r"\b(?:no|not|never|without|unverified|absence of|lack of)\b[^.!?]*$", preceding, re.I):
             issues.append("A candidate website is described as official/verified; website identity was not independently verified.")
             break
+    closed_notice = any(page.get("extraction_success") and
+                        "this posting is no longer available" in " ".join(page.get("text", "").casefold().split())
+                        for page in facts.get("application_page_observations", []))
+    if closed_notice:
+        pattern = r"\b(?:job|posting|position|listing|role)(?:\s+listing)?\s+(?:is|remains|appears)\s+(?:still\s+)?(?:open|active|available|not\s+(?:expired|closed))\b"
+        for match in re.finditer(pattern, summary, re.I):
+            preceding = summary[max(0, match.start() - 45):match.start()]
+            if not re.search(r"\b(?:not|never|no|cannot|whether|unclear|unknown|if)\b[^.!?]*$", preceding, re.I):
+                issues.append("Summary claims an open or unexpired job despite an explicit closed-posting notice in collected text.")
+                break
     return issues
 
 
 def factual_summary(facts):
     """Conservative fallback for detected errors that persist after one retry."""
     parts = []
+    for page in facts.get('application_page_observations', []):
+        details = page_details(page)
+        if details['availability'] in ('closed', 'expired'):
+            parts.append('The recorded posting is ' + details['availability'] + ': "' + details['availability_quote'] + '". This does not establish fraud.')
+        elif details['content_kind'] in ('javascript_shell', 'login_shell'):
+            parts.append('Only a JavaScript/login shell was collected; job content and availability remain unknown.')
     for quote in facts.get("content_concern_quotes", [])[:3]:
         parts.append("Quoted posting concern: " + quote)
     for item in facts.get("company_domain_observations", []):
@@ -90,13 +115,6 @@ def factual_summary(facts):
             parts.append(f"The separate company-domain lookup for {item['domain']} returned registration date {item.get('domain_created')} and age {item.get('domain_age_days')} days; this does not verify employer identity.")
         else:
             parts.append("The separate company-domain registration lookup did not return registration evidence.")
-    for result in facts.get("recruiter_email_checks", []):
-        for email in result.get("emails", []):
-            comparison = email.get("comparison")
-            if comparison == "matching_domain":
-                parts.append("Posting email " + email["email"] + " shares the candidate company domain; domain consistency is supported, not recruiter identity.")
-            elif comparison in ("different_domain", "free_provider"):
-                parts.append("Posting email " + email["email"] + " uses a different domain or free provider; this is not proof of fraud or affiliation.")
     for item in facts["url_observations"]:
         parts.append(f"URL inspection observed {item['observed_http_redirect_count']} HTTP redirects and a destination on {item['final_domain']} (HTTP {item['http_status']}).")
     for page in facts.get("application_page_observations", []):

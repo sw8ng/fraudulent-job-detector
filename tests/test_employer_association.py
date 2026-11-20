@@ -46,7 +46,7 @@ class AssociationTests(unittest.TestCase):
 
     def check(self, handler):
         with httpx.Client(transport=httpx.MockTransport(handler)) as client, patch("check_employer_association.validate_public_url"):
-            return check_employer_association("https://example.com/", "Software Engineer", "San Mateo, CA", client=client)
+            return check_employer_association("https://example.com/", "Software Engineer", "San Mateo, CA", client=client, respect_robots=False)
 
     def test_linked_hiring_platform_match_is_not_identity_verification(self):
         def handler(request):

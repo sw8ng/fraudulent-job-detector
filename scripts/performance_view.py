@@ -23,7 +23,6 @@ def timing_parts(run, tool_calls, company_search=False):
         "check_employer_association": "Employer Association",
         "collect_application_page": "Application-Page Collection",
         "get_company_domain_info": "Company Domain Investigation",
-        "check_recruiter_email": "Email Domain Comparison",
     }
     parts = []
     counts = {}
@@ -84,10 +83,14 @@ def write_dashboard(experiment, path):
             try:
                 report = json.loads((path.parent / filename).read_text(encoding="utf-8"))
                 investigation = report.get("investigation", {})
+                run['conclusion'] = report.get('conclusion')
             except (OSError, ValueError):
                 pass
         calls = investigation.get("tool_calls", run.get("tool_calls", []))
-        run["timing_parts"] = timing_parts(run, calls, investigation.get("company_lookup") is not None)
+        if investigation.get('evidence_reuse'):
+            calls = []
+            run['evidence_reused'] = True
+        run["timing_parts"] = timing_parts(run, calls, investigation.get("company_lookup") is not None and not investigation.get('evidence_reuse'))
         experiment["runs"].append(run)
     data = json.dumps(experiment, ensure_ascii=True).replace("<", "\\u003c")
     template = r'''<!doctype html>
@@ -112,6 +115,8 @@ pre{font:12px 'IBM Plex Mono',monospace;white-space:pre-wrap;overflow-wrap:anywh
 <label>Model <select id="model"><option value="">All models</option></select></label>
 <label>Case <select id="case"><option value="">All cases</option></select></label>
 <p id="overview"></p>
+<section><h2>Efficiency Summary</h2><table><thead><tr><th>Model</th><th>Completed / Attempted</th><th>Mean Completed Runtime</th><th>Recorded Input Tokens</th><th>Recorded Output Tokens</th><th>Estimated API Cost (USD)</th></tr></thead><tbody id="efficiency"></tbody></table></section>
+<section><h2>Workflow and Evidence Checks</h2><table><thead><tr><th>Model</th><th>Runs Checked</th><th>Expected Tools Selected</th><th>Useful Tool Selections</th><th>Expected Facts Retained</th><th>Fact-check Coverage</th><th>Known-rule Violations</th><th>Reports Flagged by Rules</th></tr></thead><tbody id="quality"></tbody></table></section>
 <section><h2>Time per Run: Individual Calls</h2><div id="timing-legend" class="legend"></div><div id="bars"></div></section>
 <section><h2>Assessment Results</h2><table><thead><tr><th>Model / case</th><th>Status / risk</th><th>Total seconds</th><th>Tokens/s</th><th>Tools / rejections</th><th>Details</th></tr></thead><tbody id="results"></tbody></table></section>
 <script id="data" type="application/json">__DATA__</script>
@@ -157,7 +162,7 @@ const colors = {
         tool_selection: '#ab96ff', final_assessment: '#7ee2a8',
         summary_correction: '#ef91cb', inspect_application_url: '#f1b65b',
         check_employer_association: '#ff885e', collect_application_page: '#e5df70',
-        get_company_domain_info: '#54d2a3', check_recruiter_email: '#c7a27a',
+        get_company_domain_info: '#54d2a3',
         unmeasured: '#888888'
 };
 
@@ -231,6 +236,11 @@ function addResultRow(run, table) {
         statusLabel.className = 'status-not-run';
     }
     const riskLabel = addElement('span', displayValue(run.risk), statusCell);
+    if (run.conclusion) {
+        addElement('div', 'Posting: ' + run.conclusion.posting_match.status.replaceAll('_', ' '), statusCell);
+        addElement('div', 'Availability: ' + run.conclusion.availability.status.replaceAll('_', ' '), statusCell);
+    }
+    if (run.evidence_reused) addElement('div', 'Saved evidence; final generation only', statusCell);
     riskLabel.className = 'risk';
     if (run.risk === 'low') {
         riskLabel.classList.add('risk-low');
@@ -272,7 +282,9 @@ function addResultRow(run, table) {
         error: run.error,
         reused: run.reused,
         summary_review: run.summary_review,
-        model_calls: run.model_calls
+        conclusion: run.conclusion,
+        model_calls: run.model_calls,
+        quality: run.quality
     };
     const text = JSON.stringify(recordedDetails, null, 2);
     const content = addElement('pre', text, panel);
@@ -283,6 +295,54 @@ function addResultRow(run, table) {
     details.addEventListener('toggle', function () {
         expandedRow.hidden = !details.open;
     });
+}
+
+function fraction(numerator, denominator) {
+    if (!denominator) return 'N/A';
+    return (100 * numerator / denominator).toFixed(1) + '% (' + numerator + '/' + denominator + ')';
+}
+
+function drawSummaries(selected) {
+    const efficiency = document.getElementById('efficiency');
+    const qualityTable = document.getElementById('quality');
+    efficiency.replaceChildren();
+    qualityTable.replaceChildren();
+    const models = [...new Set(selected.map(run => run.model))];
+    for (const model of models) {
+        const rows = selected.filter(run => run.model === model);
+        const attempted = rows.filter(run => run.status !== 'not_run');
+        const completed = rows.filter(run => run.status === 'completed');
+        const durations = completed.filter(run => typeof run.seconds === 'number');
+        const mean = durations.length ? (durations.reduce((sum, run) => sum + run.seconds, 0) / durations.length).toFixed(2) + 's' : 'N/A';
+        const calls = attempted.flatMap(run => run.model_calls || []);
+        const allTokens = attempted.length && attempted.every(run => run.model_calls && run.model_calls.length) &&
+            calls.every(call => call.status === 'completed' && Number.isFinite(call.prompt_eval_count) && Number.isFinite(call.eval_count));
+        const input = allTokens ? calls.reduce((sum, call) => sum + call.prompt_eval_count, 0) : 'N/A';
+        const output = allTokens ? calls.reduce((sum, call) => sum + call.eval_count, 0) : 'N/A';
+        const efficiencyRow = addElement('tr', undefined, efficiency);
+        const localOnly = rows.every(run => run.provider === 'ollama' || (typeof run.model === 'string' && run.model.includes(':')));
+        const estimatedCost = attempted.length && attempted.every(run => Number.isFinite(run.estimated_api_cost_usd)) ?
+            attempted.reduce((sum, run) => sum + run.estimated_api_cost_usd, 0).toFixed(4) : (localOnly ? '— (local)' : 'Unavailable');
+        for (const value of [model, fraction(completed.length, attempted.length), mean, input, output, estimatedCost]) addElement('td', String(value), efficiencyRow);
+        const evaluated = rows.filter(run => run.quality && run.quality.status === 'evaluated');
+        function pooled(field) {
+            let numerator = 0, denominator = 0;
+            for (const run of evaluated) {
+                const metric = run.quality[field];
+                if (metric) { numerator += metric.numerator; denominator += metric.denominator; }
+            }
+            return fraction(numerator, denominator);
+        }
+        const findingCoverage = evaluated.filter(run => run.quality.finding_recall && run.quality.finding_recall.denominator > 0).length;
+        const claimRuns = evaluated.filter(run => run.quality.unsupported_claims && Number.isFinite(run.quality.unsupported_claims.count));
+        const violations = claimRuns.reduce((sum, run) => sum + run.quality.unsupported_claims.count, 0);
+        const flagged = claimRuns.filter(run => run.quality.unsupported_claims.count > 0).length;
+        const qualityRow = addElement('tr', undefined, qualityTable);
+        for (const value of [model, evaluated.length + '/' + rows.length, pooled('tool_recall'), pooled('tool_precision'),
+            pooled('finding_recall'), findingCoverage + '/' + evaluated.length, claimRuns.length ? violations : 'N/A', fraction(flagged, claimRuns.length)]) {
+            addElement('td', String(value), qualityRow);
+        }
+    }
 }
 
 function render() {
@@ -316,9 +376,12 @@ function render() {
         if (run.status === 'timed_out') timedOut += 1;
         if (run.status === 'not_run') notRun += 1;
     }
-    document.getElementById('overview').textContent = selected.length + ' results | ' +
+    const modeLabel = experiment.mode === 'saved_evidence_reassessment' ? 'Saved Evidence: Final Generation Only | ' :
+        (experiment.mode === 'saved_evaluation' ? 'Saved Assessment Evaluation | ' : '');
+    document.getElementById('overview').textContent = modeLabel + selected.length + ' results | ' +
         completed + ' completed | ' + failed + ' failed | ' + reused + ' reused' +
         (timedOut ? ' | ' + timedOut + ' timed out' : '') + (notRun ? ' | ' + notRun + ' not started' : '');
+    drawSummaries(selected);
     drawLegend(selected);
     const bars = document.getElementById('bars');
     const table = document.getElementById('results');

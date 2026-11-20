@@ -83,7 +83,7 @@ class ContentTests(unittest.TestCase):
             return {"status": "no_matching_candidate", "company_website": None}
         result = assess_job({"company": "Acme", "description": "Join Acme."}, client=client, company_finder=finder, include_trace=True, model="test-model")
         self.assertEqual(result["investigation"]["content_analysis"]["status"], "completed")
-        self.assertTrue(any("Initial content analysis" in m.get("content", "") for m in client.chat.call_args.kwargs["messages"] if isinstance(m, dict)))
+        self.assertTrue(any('"content_analysis"' in m.get("content", "") for m in client.chat.call_args.kwargs["messages"] if isinstance(m, dict)))
 
 
 if __name__ == "__main__":

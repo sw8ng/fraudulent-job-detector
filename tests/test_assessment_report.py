@@ -16,10 +16,10 @@ class ReportTests(unittest.TestCase):
     def test_skipped_claims_remain_not_checked(self):
         report = self.report(employer_association={"status": "not_requested"})
         self.assertEqual(report["claim_checks"]["job_on_company_careers_page"]["status"], "not_checked")
-        self.assertEqual(report["claim_checks"]["email_domain_consistency"]["status"], "not_checked")
+        self.assertNotIn("email_domain_consistency", report["claim_checks"])
         self.assertEqual(report["assessment"]["summary"], "Evidence is limited.")
         self.assertEqual(report["unresolved"], [])
-        self.assertEqual(len(report["not_checked"]), 6)
+        self.assertEqual(len(report["not_checked"]), 5)
 
     def test_failed_association_is_unresolved_not_conflicting(self):
         report = self.report(employer_association={"status": "could_not_check", "errors": [{"message": "Timeout"}]})

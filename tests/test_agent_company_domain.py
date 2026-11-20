@@ -35,7 +35,7 @@ class CompanyDomainTests(unittest.TestCase):
         self.assertEqual(trace[1]["evidence"]["scope"], "candidate_company_website_registration")
         self.assertEqual(report["claim_checks"]["company_domain_registration"]["status"], "supported")
         self.assertTrue(any(e["type"] == "company_domain_registration" for e in report["evidence_sources"]))
-        self.assertIn('"company_domain_observations"', client.chat.call_args.kwargs["messages"][-1]["content"])
+        self.assertIn('"company_domain_registration"', client.chat.call_args.kwargs["messages"][-1]["content"])
         self.assertIn('"domain_age_days": 2000', client.chat.call_args.kwargs["messages"][-1]["content"])
 
     def test_not_available_without_selected_website(self):

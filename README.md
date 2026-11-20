@@ -51,7 +51,7 @@ python scripts/collect_application_page.py "https://stripe.com/careers/listing/s
 Page evidence is saved in assessment `evidence_sources` and `investigation.tool_calls`.
 Collection is optional within this bounded selection workflow. URL Inspection uses
 the posting's exact URL without requiring the model to retype it. This version
-reads public HTML only; it does not execute JavaScript, click Apply, log in or decode
+reads public HTML and embedded JobPosting JSON-LD, with exact-job public API fallback for supported Ashby/Greenhouse URLs. It does not execute JavaScript, click Apply, log in or decode
 job-board redirect wrappers. No Indeed-specific handling is integrated. HTTP errors
 and missing text are limitations, not fraud evidence. Even successful collection
 may contain only boilerplate. Downloads are capped at two megabytes and retained
@@ -170,8 +170,7 @@ returned evidence are saved in `tool_calls`. Careers links in page navigation
 and footers are preserved, and links matching the job title take priority.
 Known tracking variants are grouped, and resolved pages are checked once.
 If a homepage exposes no careers links, common `/careers` and `/jobs` paths may
-be probed, with that limitation recorded. The bound is four distinct HTML pages
-and at most eight candidate fetch attempts, including failed/duplicate targets.
+be probed, with that limitation recorded. The linked-page crawl is bounded to four HTML pages/eight attempts. If it finds no match, up to two targeted searches can retrieve at most three additional candidates, including job-specific links on a fetched careers index. Search results must stay within the candidate company domain or its recorded linked hiring-platform board. Snippets alone never establish a match.
 
 ```powershell
 python scripts/check_employer_association.py "https://company.example/careers" "Software Engineer" --location "San Francisco, CA"
@@ -181,7 +180,7 @@ The final assessment uses an explicit output budget and retries once if truncate
 reusing the gathered evidence. Longer PDFs may use more local memory and time.
 Summaries also receive explicitly scoped tool facts. Narrow mechanical checks
 detect unobserved redirects, unsupported official-site wording, selected HTTP-status misattributions and overly certain fraud wording. Detected errors get one wording-correction
-attempt, then a factual fallback if necessary. The model's risk label is kept;
+attempt, then a factual fallback if necessary. A correction keeps the model's risk label; an unsuccessful correction produces an insufficient-evidence fallback. The final prompt receives a separate evidence packet rather than the full tool-selection transcript;
 `investigation.summary_review` records the original wording and outcome. This
 does not verify every sentence or establish the accuracy of the risk label.
 
@@ -228,7 +227,7 @@ The saved result starts with `assessment` (`risk_level` and `summary`),
 `recommended_action`. Claim checks include a status, reason, and evidence IDs.
 An unperformed check is `not_checked`; an attempted but inconclusive check is
 `unresolved`. Successful checks are `supported` for their specific claims:
-email-domain consistency, recorded company-domain registration, collected application
+recorded company-domain registration, collected application
 text, job matches, or destination association. `different_domain` records a completed
 comparison with differing domains; it is not automatically fraud evidence.
 Company/recruiter identity and website ownership are described under `verification_limits`,
@@ -341,35 +340,7 @@ Run the offline checks:
 python -m unittest discover -s tests -v
 ```
 
-## Recruiter email/domain comparison
-
-The assessment can now let the selected model request an email-domain comparison when the
-posting contains email addresses. The check handles company subdomains and
-identifies a limited set of free email providers,
-and retains source snippets for each address. It uses no paid API, model calls,
-network requests or outgoing email itself.
-
-Run the check independently on extracted posting JSON:
-
-```powershell
-python scripts/check_recruiter_email.py "data/output/your-posting.json"
-```
-
-Optionally supply a candidate company website:
-
-```powershell
-python scripts/check_recruiter_email.py "data/output/your-posting.json" --company-website "https://example.com"
-```
-
-Full assessments use the existing `scripts/assess_job.py` command. Email checks
-are optional, may run once, and share the bounded tool-selection workflow
-with URL inspection, company-domain investigation and employer association. Reports retain the comparisons
-as evidence. Matching addresses support `email_domain_consistency`; different
-or free-provider domains are reported as differences when a company comparison
-is available. Identity authentication remains a separate capability limit.
-A matching domain does not establish recruiter identity or mailbox ownership.
-Different domains can belong to staffing agencies, and a free email provider
-alone does not establish fraud. Addresses may also be administrative contacts.
+## Company-domain checks
 
 Company-domain checks accept only the selected company website, may execute once,
 and share the bounded selection workflow. Rejected or unresolved company
@@ -467,6 +438,128 @@ content flows into two columns on wide screens and one column on smaller screens
 
 The timing chart uses one shared legend for individual model stages and verification tools. Measured calls follow execution rounds, placing requested tools before final assessment. Unmeasured time is labeled separately because its position was not recorded. Hover over a segment to see its call name and measured seconds. Unmeasured work remains separate; saved company-search time is not estimated.
 
-Email comparison scans the extracted contact, description and full original posting text, including encoded recipients in embedded `mailto:` links. It retains source context and only offers the tool when an address is found. Email subjects and message bodies are not treated as recipients.
 
 Employer Association records discovered careers/job links with their source page. An exact observed application destination linked through that path can support destination association, including external hiring platforms. Merely sharing the hiring platform domain or returning HTTP 200 is insufficient.
+
+
+## Workflow and evidence evaluation
+
+The existing comparison dashboard now displays separate efficiency and workflow/evidence
+summaries. Quality evaluation reads saved assessment files; it does not call a model,
+contact websites, or change the saved assessments. No combined score is produced.
+
+Create one ground-truth JSON per posting and keep it in a folder of your choice.
+The worked example is `local/evaluation/week11/ground-truth/rtx-hwil.json` when using
+this workspace's evaluation inputs. Its expected/useful tool choices are an example
+to review, not a published benchmark answer key.
+
+- `schema_version`, `case_id`, `input_fingerprint`: identify the case and exact extracted input. The fingerprint is already present in comparison cases.
+- `expected_tools`: checks that should be selected. `useful_tools` includes these and any acceptable optional checks. Duplicate requests earn no extra credit.
+- `important_findings`: expected finding IDs, evidence types and optional exact source quotes. Matching applies to evidence and structured IDs, not wording of the final summary.
+- `unsupported_claims`: known checks to apply. Supported rules are `redirect_claim_without_observed_redirect`, `open_claim_with_closed_evidence`, `forbidden_finding` (with `finding_id`), and `structured_mismatch` (with `path` and `equals`). These do not detect every possible hallucination.
+- `structured_expectations`: optional `path`/`equals` checks against report fields.
+
+Tool/finding entries can have a `when` condition. For example, a tool entry can be
+`{"name":"collect_application_page","when":{"evidence_type":"url_inspection","field":"http_status","equals":200}}`.
+Conditions can also use `path`/`equals`, or `evidence_type`/`source_quote` to require
+a specific recorded source passage. Use `path`/`exists` for checks conditional on an available candidate website. Inapplicable checks are excluded and reported.
+
+Evaluate an existing comparison, using a **new output folder** each time:
+
+```powershell
+python scripts/compare_models.py --evaluate-saved local/evaluation/week10/full-efficiency-comparison/comparison.json --ground-truth-dir local/evaluation/week11/ground-truth --output local/evaluation/quality-review
+Start-Process "local/evaluation/quality-review/comparison.html"
+```
+
+For a normal model comparison, add `--ground-truth-dir` to the existing command to
+score each saved result automatically. The same ground truth works for any model.
+Changing a case file causes evaluation to use the new definitions; the output
+records the definitions, their fingerprint and the evaluator version.
+
+Tool recall counts distinct expected tools validly requested. Tool precision divides
+distinct useful valid selections by all requests, including rejected and repeated
+requests. HTTP errors such as 403 are evidence-access failures, not automatically
+bad selections. Finding recall counts supported expected IDs in the final assessment.
+Conditional findings measure retention of facts in recorded evidence; they cannot score important facts that were never collected. A readable HTML shell is not proof that a full job description or application form was reached. Invalid quotations can fail a typed finding even when the underlying observation is true.
+Known-claim count reports detected violations; the rate is the fraction of scorable
+assessments with at least one. Missing data and zero denominators display N/A.
+
+Current finding IDs are `posting_closed`, `application_page_unavailable`,
+`no_http_redirects`, `application_domain_matches`, `application_domain_differs`,
+`company_registration_observed`, `applicant_payment_request`, `job_match_found`.
+New IDs need a corresponding evidence-support rule before they can earn credit.
+
+New assessments request model-selected `assessment.findings` with `id`, `quote`,
+and `evidence_ids`. Tags do not earn credit without supporting cited evidence.
+Generation offers only finding choices supported by the actual recorded evidence, including valid IDs and exact text quotes. The model selects which choices to retain, or none; Python does not insert final findings or consult ground truth. Duplicate/unsupported choices and detected factual wording errors receive one correction attempt and otherwise a factual fallback. Clear unqualified employer-authentication claims are rejected because these checks do not authenticate identity. Raw drafts and validation issues remain recorded. This measures assisted evidence selection, so scores should not be presented as an unchanged free-generation task.
+Python-generated `key_findings` are not used as proof of model retention. Older
+untagged reports and factual fallback summaries show N/A for finding recall; they
+still support applicable trace and known-claim checks. Evaluation targets the final
+pipeline output, including corrections/fallbacks, not an isolated raw model answer.
+
+Existing timing data is retained. The efficiency summary derives averages and token
+totals from existing measurements; missing token counters or API cost display N/A.
+Reported API cost is reserved for future provider measurements. No pricing or API
+integration is added here.
+
+The methodology adapts stage-level evaluation from [T-Eval](https://aclanthology.org/2024.acl-long.515/),
+structured tool validation from [BFCL](https://proceedings.mlr.press/v267/patil25a.html),
+and the evidence/faithfulness distinction from [RAGAS](https://aclanthology.org/2024.eacl-demo.16/).
+The case definitions and metrics are project-specific; no benchmark datasets,
+embeddings or LLM judge are used. Scoring stored evidence is repeatable, but separate
+live runs can receive different search results or website responses.
+
+
+### Separate posting conclusions and reuse existing evidence
+
+Reports and the existing dashboard now show posting match and availability separately from the model's fraud-risk assessment. A recorded closure notice can establish `closed` even when risk is inconclusive. Matching job content establishes an observed listing, not independent identity or acceptance of applications. A title, HTTP 200, or JavaScript/login shell alone establishes neither an open job nor a full application page.
+
+To regenerate only final assessments from a saved comparison, use a new output folder:
+
+```powershell
+python scripts/compare_models.py --reassess-saved local/evaluation/week11/expanded/comparison/comparison.json --ground-truth-dir local/evaluation/week11/expanded/ground-truth --output local/evaluation/week11/expanded/my-evidence-replay --max-seconds 300 --max-total-seconds 1800
+Start-Process "local/evaluation/week11/expanded/my-evidence-replay/comparison.html"
+```
+
+This requires the original models in Ollama. It reuses each run's exact input and tool evidence without extraction, search or tool execution. Original incomplete attempts are preserved without retry. Both case and batch limits apply. The new times and tokens measure final generation only; tool metrics still describe the source trace and are not measurements of the improved live search. Results retain evidence provenance and source performance separately. Source reports are never overwritten.
+
+Collection supports embedded JobPosting data and exact-job public endpoints documented by [Ashby](https://developers.ashbyhq.com/docs/public-job-posting-api) and [Greenhouse](https://docs.greenhouse.io/job-board.html). These data describe postings on the observed board; they do not authenticate the employer. Public HTML, structured-data and API access can still fail or omit material content.
+
+
+## Claude and GPT assessments
+
+The same assessment workflow supports local Ollama models, Claude Sonnet 5.5 (`claude-sonnet-5-5`) and GPT-6.2 Sol (`gpt-6.2-sol`). All use the same content checks, Python verification tools, source binding, evidence validation and final conclusions. Extraction remains local; existing extracted inputs can be reused without another extraction pass.
+
+Install dependencies using the Python interpreter that runs this repository:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+Add `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` locally to the ignored `.env` file, or set them in the process environment. Existing environment values take precedence. Keys are never included in model evidence, commands, saved reports or logs. Local-only runs do not require either key. Cloud-only comparisons do not require Ollama; a mixed comparison needs a working Ollama server for its local models.
+
+Run fresh full assessments on the reviewed Week 11 inputs, preserving previous results in a new folder:
+
+```powershell
+python scripts/compare_models.py --models qwen3.5:9b claude-sonnet-5-5 gpt-6.2-sol --input-dir local/evaluation/week11/expanded/inputs --ground-truth-dir local/evaluation/week11/expanded/ground-truth --output local/evaluation/new-three-model-run --max-seconds 300 --max-total-seconds 3600
+Start-Process "local/evaluation/new-three-model-run/comparison.html"
+```
+
+This executes fresh content analysis, model-selected tools and final assessments. The standard case/batch deadlines still apply. Matching completed results in that output folder are reused when resuming without `--force`. Authentication/model access is checked before starting missing work. SDK automatic retries are disabled; API failures retain partial evidence rather than fabricating a verdict. Earlier result folders are not changed.
+
+Provider settings are recorded explicitly: Qwen keeps its existing local context/output settings; Sonnet 5.5 uses `between_tools` thinking and provider-controlled sampling; GPT-6.2 Sol uses Responses with low reasoning and `store=false`. Sonnet 5.5 does not accept temperature or disabled thinking, and GPT-6.2 Sol rejects reasoning `none`. These platform settings differ, so the comparison is of the same workflow rather than identical inference engines. The adapters preserve native tool-call IDs and required thinking/reasoning history between tool rounds. Neither enables a provider's built-in web tools.
+
+Native API input/output usage, response/model IDs, available cache/reasoning counters and effective settings appear in the existing performance records. API-only generation durations are unavailable, so native tokens/s remains unavailable rather than being inferred from total request latency. Standard uncached token-price estimates appear in a separate estimated-cost column; actual billed API cost remains N/A. Estimates use the documented rates checked November 20, 2026, exclude unsupported cache-priced requests and are not invoices. Refused/incomplete outputs remain explicitly handled by the assessment pipeline.
+
+Provider references: [Sonnet 5.5 settings/pricing](https://platform.claude.com/docs/en/models/sonnet-5-5/overview), [Claude structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs), [GPT-6.2 Sol](https://developers.openai.com/api/docs/models/gpt-6.2-sol), [OpenAI function calling](https://developers.openai.com/api/docs/guides/function-calling), [OpenAI structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs). Other API model IDs may have different parameter requirements; the listed models are the validated integration targets.
+
+
+The dashboard's workflow scores compare configured tool expectations and retained evidence facts. Files passed through `--ground-truth-dir` currently define those expectations; they do not label postings genuine or fraudulent. Expected-tool selection and fact retention are not classification precision, recall or accuracy. No authenticity reference labels are scored by this evaluator. A genuine-only collection can reveal false alarms and abstentions, but cannot establish sensitivity to fraudulent postings; labeled scam examples are needed for that evaluation. An insufficient-evidence outcome is an abstention, not a fraud prediction. Report abstentions separately rather than counting them as correct classifications.
+
+The efficiency table shows estimated API cost only. Local Ollama rows are marked local; cloud rows use recorded token usage and documented rates. The always-unavailable invoice-cost column has been removed. Assessment reports and historical measurements remain unchanged by presentation updates.
+
+
+Access-limited sources are neutral: failed Indeed/ZipRecruiter Apply wrappers are skipped, and blocked or unavailable checks are excluded from final risk evidence. Careers discovery follows actual company links, respects robots.txt, and stops when access fails. Job availability stays unknown unless readable evidence establishes otherwise. Current source inputs use L_; dataset labels and filenames are hidden from assessment prompts. Historical saved assessments keep their original results until explicitly rerun.
+
+
+Employer job IDs are an optional matching signal. The system separates employer IDs from LinkedIn listing IDs, checks exact identifiers alongside title and location, and narrows company-site searches when an employer ID is available. Missing IDs are neutral. A match supports association with an opening and does not authenticate the employer.

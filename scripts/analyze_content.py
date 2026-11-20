@@ -8,6 +8,7 @@ from pathlib import Path
 
 from jsonschema import validate
 from ollama import Client
+from model_client import create_model_client
 
 
 CONTENT_SCHEMA = {
@@ -80,7 +81,7 @@ def analyze_content(job, *, model, client=None):
     if not isinstance(source, str) or not source.strip():
         result["limitations"].append("No posting text was supplied for content analysis")
         return result
-    client = client or Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"), timeout=300)
+    client = client or create_model_client(model)
     target = {}
     for field in ("company", "job_title", "location", "application_url", "recruiter_name"):
         target[field] = job.get(field)
@@ -181,6 +182,6 @@ def analyze_content(job, *, model, client=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("job_json", type=Path)
-    parser.add_argument("--model", required=True, help="Installed Ollama model tag")
+    parser.add_argument("--model", required=True, help="Ollama tag or Claude/GPT API model ID")
     args = parser.parse_args()
     print(json.dumps(analyze_content(json.loads(args.job_json.read_text(encoding="utf-8")), model=args.model), indent=2, ensure_ascii=False))

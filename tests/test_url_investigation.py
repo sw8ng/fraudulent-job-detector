@@ -138,7 +138,8 @@ class AgentTests(unittest.TestCase):
         result, client, investigator = self.run_agent({"application_url": "https://example.com"})
         investigator.assert_called_once_with("https://example.com", None)
         messages = client.chat.call_args.kwargs["messages"]
-        self.assertTrue(any(isinstance(m, dict) and m.get("role") == "tool" for m in messages))
+        self.assertNotIn("url_inspection", messages[-1]["content"])
+        self.assertIn("access_failures_affect_risk", messages[-1]["content"])
         self.assertFalse(result["investigation"]["tool_calls"][0]["evidence"]["lookup_success"])
 
     def test_invented_url_rejected(self):

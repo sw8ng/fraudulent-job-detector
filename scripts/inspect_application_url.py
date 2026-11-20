@@ -55,6 +55,9 @@ def inspect_application_url(application_url: str, company_website: str | None = 
         application_url: Exact application URL supplied in the job posting.
         company_website: Claimed employer website, if supplied in the posting.
     """
+    from access_policy import shelved_wrapper, skipped_access
+    if shelved_wrapper(application_url):
+        return dict(skipped_access(), original_url=application_url)
     now = datetime.now(timezone.utc)
     result = {
         "checked_at": now.isoformat(), "original_url": application_url,

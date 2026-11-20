@@ -11,6 +11,9 @@ def follow_redirects(url, *, client=None, max_redirects=10):
     # Import at call time to share URL validation with the composed inspection tool.
     from inspect_application_url import fetch, domain_for, REDIRECT_CODES
 
+    from access_policy import shelved_wrapper, skipped_access
+    if shelved_wrapper(url):
+        return dict(skipped_access(), original_url=url, errors=[], final_domain=None)
     if client is None:
         with httpx.Client(timeout=15, follow_redirects=False, trust_env=False) as connection:
             return follow_redirects(url, client=connection, max_redirects=max_redirects)
@@ -22,6 +25,9 @@ def follow_redirects(url, *, client=None, max_redirects=10):
         for step in range(max_redirects + 1):
             if url in result["redirect_chain"]:
                 raise ValueError("Redirect loop detected")
+            if shelved_wrapper(url):
+                result.update(skipped_access())
+                break
             status, location = fetch(client, url)
             result["redirect_chain"].append(url)
             result["http_status"] = status
@@ -29,6 +35,7 @@ def follow_redirects(url, *, client=None, max_redirects=10):
                 result.update(final_url=url, final_domain=domain_for(url),
                               https=urlsplit(url).scheme == "https", redirect_lookup_success=True)
                 if status >= 400:
+                    result.update(access_status='unavailable', assessment_impact='none', redirect_lookup_success=False)
                     result["errors"].append({"stage": "http", "message": f"Destination returned HTTP {status}; page unavailable"})
                 break
             if not location:

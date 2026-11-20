@@ -39,7 +39,7 @@ class CollectorTests(unittest.TestCase):
     def collect(self, handler):
         with httpx.Client(transport=httpx.MockTransport(handler)) as client:
             with patch('collect_application_page.validate_public_url'):
-                return collect_application_page('https://example.com/apply', client=client)
+                return collect_application_page('https://example.com/apply', client=client, respect_robots=False)
 
     def test_collects_metadata_form_labels_and_links_without_a_verdict(self):
         result = self.collect(lambda request: httpx.Response(200, headers={'content-type':'text/html'},
@@ -97,7 +97,7 @@ class CollectorTests(unittest.TestCase):
             return httpx.Response(302, headers={'location':'http://127.0.0.1/admin'})
         with httpx.Client(transport=httpx.MockTransport(handler)) as client:
             with patch('collect_application_page.validate_public_url', side_effect=[None, ValueError('Private destination')]):
-                result = collect_application_page('https://example.com/apply', client=client)
+                result = collect_application_page('https://example.com/apply', client=client, respect_robots=False)
         self.assertEqual(requested, ['https://example.com/apply'])
         self.assertEqual(result['reason'], 'fetch_failed')
 

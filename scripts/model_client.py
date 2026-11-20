@@ -1,7 +1,28 @@
-"""Record local model latency and raw responses without changing model settings."""
+"""Route assessment providers and record latency, native usage and raw responses."""
 
 import json
 import time
+import os
+
+
+def provider_for_model(model):
+    if ':' not in model and model.startswith('claude-'):
+        return 'anthropic'
+    if ':' not in model and model.startswith('gpt-'):
+        return 'openai'
+    return 'ollama'
+
+
+def create_model_client(model, *, timeout=300):
+    provider = provider_for_model(model)
+    if provider == 'anthropic':
+        from provider_clients import AnthropicClient
+        return AnthropicClient(timeout=timeout)
+    if provider == 'openai':
+        from provider_clients import OpenAIClient
+        return OpenAIClient(timeout=timeout)
+    from ollama import Client
+    return Client(host=os.environ.get('OLLAMA_HOST', 'http://localhost:11434'), timeout=timeout)
 
 
 class MeasuredClient:
@@ -16,6 +37,7 @@ class MeasuredClient:
     def chat(self, **kwargs):
         started = time.perf_counter()
         record = {"stage": self.stage, "model": kwargs["model"],
+                  'provider': provider_for_model(kwargs['model']),
                   "options": kwargs.get("options", {}), "status": "running",
                   "started_at": time.time(), "seconds": 0}
         self.calls.append(record)
@@ -27,6 +49,11 @@ class MeasuredClient:
             for key in ("eval_count", "prompt_eval_count", "eval_duration", "prompt_eval_duration", "load_duration"):
                 value = getattr(response, key, None)
                 if isinstance(value, (int, float)):
+                    record[key] = value
+            for key in ('provider', 'provider_model', 'provider_response_id', 'provider_usage',
+                        'estimated_api_cost_usd', 'pricing_note', 'provider_options'):
+                value = getattr(response, key, None)
+                if isinstance(value, (str, dict, int, float)):
                     record[key] = value
             text = getattr(response.message, "content", None)
             if isinstance(text, str):

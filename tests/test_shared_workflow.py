@@ -26,6 +26,7 @@ class SharedWorkflowTests(unittest.TestCase):
         def chat(**kwargs):
             nonlocal count
             if 'tools' in kwargs:
+                self.assertNotIn('check_recruiter_email', [tool['function']['name'] for tool in kwargs['tools']])
                 if len(self.job['application_url']) > 160:
                     self.assertNotIn(self.job['application_url'], str(kwargs['messages']))
                 if check_url_schema:
@@ -102,6 +103,15 @@ class SharedWorkflowTests(unittest.TestCase):
         ])
         inspector.assert_called_once_with(self.job['application_url'], self.job['company_website'])
         self.assertEqual(report['investigation']['tool_calls'][0]['effective_arguments']['application_url'], self.job['application_url'])
+
+    def test_contact_metadata_does_not_reenable_removed_email_tool(self):
+        self.job = dict(self.job, contact_email='jobs@example.com')
+        report, inspector, collector, count = self.run_sequence([
+            ('inspect_application_url', {}),
+            ('collect_application_page', {}),
+            ('check_employer_association', {})
+        ])
+        self.assertNotIn('email_domain_consistency', report['claim_checks'])
 
     def test_association_accepts_source_bound_empty_arguments(self):
         report, inspector, collector, count = self.run_sequence([

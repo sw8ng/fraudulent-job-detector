@@ -187,7 +187,7 @@ class CompanyTests(unittest.TestCase):
         self.assertIsNone(posting["company_website"])
         self.assertEqual(result["investigation"]["company_lookup"], lookup)
         messages = client.chat.call_args.kwargs["messages"]
-        self.assertIsNone(json.loads(messages[1]["content"])["company_website"])
+        self.assertIsNone(json.loads(messages[1]["content"])["posting"]["company_website"])
 
     def test_supplied_website_skips_lookup(self):
         finder = Mock()
